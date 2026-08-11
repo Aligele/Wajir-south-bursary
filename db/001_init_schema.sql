@@ -1,0 +1,4 @@
+-- See Supabase project: schema `bursary`
+-- Tables: users, wards, applications, approvals, documents, notifications
+-- (Full DDL applied via Supabase migrations bursary_init_schema
+--  and bursary_bucket_and_triggers.)

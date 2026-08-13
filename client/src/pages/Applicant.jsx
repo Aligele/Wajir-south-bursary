@@ -109,11 +109,22 @@ function ApplyForm({ category, wards, onDone, onBack }) {
   const [f, setF] = useState(blank);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
+  const [files, setFiles] = useState([]);
+  const [declared, setDeclared] = useState(false);
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
 
   useEffect(() => {
     if (wards.length && !f.ward) set("ward", wards[0]);
   }, [wards]);
+
+  function addFiles(e) {
+    const picked = Array.from(e.target.files || []);
+    setFiles((prev) => [...prev, ...picked]);
+    e.target.value = "";
+  }
+  function removeFile(i) {
+    setFiles((prev) => prev.filter((_, idx) => idx !== i));
+  }
 
   function validate() {
     const e = {};
@@ -125,6 +136,7 @@ function ApplyForm({ category, wards, onDone, onBack }) {
     if (!/^\d{6,9}$/.test(f.id_number)) e.id_number = "Valid ID number";
     if (!(Number(f.amount_requested) > 0)) e.amount_requested = "Enter amount";
     if (!f.reason.trim()) e.reason = "Required";
+    if (!declared) e.declared = "You must confirm residency to submit";
     setErrors(e);
     return !Object.keys(e).length;
   }
@@ -133,13 +145,18 @@ function ApplyForm({ category, wards, onDone, onBack }) {
     if (!validate()) return;
     setBusy(true);
     try {
-      await api.submitApp({
+      const { application } = await api.submitApp({
         ...f,
         level: category.label,
         edu_category: category.slug,
         amount_requested: Number(f.amount_requested),
         annual_fees: Number(f.annual_fees) || 0,
       });
+      // upload any attached documents against the newly created application
+      for (const file of files) {
+        try { await api.uploadDoc(application.id, file, file.name); }
+        catch { /* one failed upload shouldn't block the rest */ }
+      }
       onDone();
     } catch (e) { alert(e.message); }
     setBusy(false);
@@ -204,6 +221,10 @@ function ApplyForm({ category, wards, onDone, onBack }) {
             <select className="field" value={f.ward} onChange={(e) => set("ward", e.target.value)}>
               {wards.map((w) => <option key={w}>{w}</option>)}
             </select>
+            <div className="text-[11px] text-ink-soft mt-1">
+              Bursaries are only for residents of Wajir South's seven wards. A parent/guardian may
+              register and submit on behalf of a student relative — that's expected.
+            </div>
           </div>
           <Field k="guardian_name" label="Parent / guardian name" ph="Full name" />
           <Field k="phone" label="Phone number" ph="07XXXXXXXX" />
@@ -219,6 +240,39 @@ function ApplyForm({ category, wards, onDone, onBack }) {
             placeholder="Briefly explain the need (e.g. orphaned, low household income, fee arrears)." />
           {errors.reason && <div className="text-xs text-brick mt-1">{errors.reason}</div>}
         </div>
+
+        <div className="bg-sand-2 border border-line rounded-xl p-4">
+          <div className="label mb-1">Supporting documents</div>
+          <p className="text-xs text-ink-soft mb-3">
+            Attach a fee structure, guardian ID copy, or result slip. You can also add these later
+            from the Track tab.
+          </p>
+          <label className="inline-flex items-center gap-2 text-sm font-semibold text-gold-d cursor-pointer">
+            <input type="file" multiple className="hidden" onChange={addFiles} />
+            <span className="border border-line rounded-lg px-3 py-2 bg-paper hover:border-gold">
+              + Choose files
+            </span>
+          </label>
+          {files.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {files.map((file, i) => (
+                <li key={i} className="flex items-center justify-between text-sm bg-paper border border-line rounded-lg px-3 py-1.5">
+                  <span className="truncate">📎 {file.name}</span>
+                  <button type="button" onClick={() => removeFile(i)} className="text-brick font-bold text-xs ml-2 flex-shrink-0">Remove</button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <input type="checkbox" className="mt-1" checked={declared} onChange={(e) => setDeclared(e.target.checked)} />
+          <span className="text-sm text-ink">
+            I confirm the student named above is a resident of <strong>{f.ward}</strong> ward,
+            within Wajir South Constituency.
+          </span>
+        </label>
+        {errors.declared && <div className="text-xs text-brick -mt-2">{errors.declared}</div>}
 
         <div className="flex justify-between items-center pt-1">
           <button onClick={onBack} className="btn-ghost">← Change category</button>

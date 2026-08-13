@@ -21,9 +21,10 @@ r.post("/register", async (req, res) => {
     .single();
 
   if (error) {
+    console.error("Register error:", error);
     if (error.code === "23505")
       return res.status(409).json({ error: "That email is already registered." });
-    return res.status(500).json({ error: "Could not create the account." });
+    return res.status(500).json({ error: "Could not create the account.", debug: error.message || String(error) });
   }
   res.json({ token: sign(data), user: data });
 });

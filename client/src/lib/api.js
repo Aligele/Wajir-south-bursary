@@ -36,7 +36,7 @@ async function req(path, { method = "GET", body, isForm } = {}) {
     return res;
   }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Something went wrong.");
+  if (!res.ok) throw new Error((data.error || "Something went wrong.") + (data.debug ? " [" + data.debug + "]" : ""));
   return data;
 }
 

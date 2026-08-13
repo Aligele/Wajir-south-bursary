@@ -22,6 +22,13 @@ app.get("/api/wards", async (_req, res) => {
   res.json({ wards: (data || []).map((w) => w.name) });
 });
 
+app.get("/api/sublocations", async (req, res) => {
+  let q = supa.from("sub_locations").select("id, ward, name").order("ward").order("name");
+  if (req.query.ward) q = q.eq("ward", req.query.ward);
+  const { data } = await q;
+  res.json({ subLocations: data || [] });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/applications", appRoutes);

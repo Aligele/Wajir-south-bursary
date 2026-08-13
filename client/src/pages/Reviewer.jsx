@@ -193,7 +193,7 @@ function QueueList({ apps, loading, onOpen, view }) {
               <div className="text-xs text-ink-soft mt-0.5">
                 {a.id} · {a.institution}
                 {a.course_name && <> · <span className="font-semibold text-green-d">{a.course_name}</span></>}
-                {" "}· {a.ward} ward
+                {" "}· {a.ward} ward{a.sub_location ? ` (${a.sub_location})` : ""}
               </div>
             </div>
             <div className="flex flex-col items-end gap-1.5">
@@ -282,6 +282,7 @@ function Drawer({ id, user, onClose, onDone, toast }) {
 
               <div className="card grid grid-cols-2 gap-x-4 gap-y-3">
                 {[["Institution", app.institution], ["Level", app.level], ["Ward", app.ward],
+                  ["Sub-location", app.sub_location || "—"],
                   ["Gender", app.gender ? (app.gender === "male" ? "Male" : "Female") : "—"],
                   ["Admission no.", app.admission_no || "—"], ["Guardian", app.guardian_name],
                   ["Phone", app.phone], ["Guardian ID", app.id_number], ["Applied", fmtDate(app.created_at)],

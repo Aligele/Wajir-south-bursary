@@ -44,6 +44,7 @@ export const api = {
   login: (email, password) => req("/auth/login", { method: "POST", body: { email, password } }),
   register: (payload) => req("/auth/register", { method: "POST", body: payload }),
   wards: () => req("/wards"),
+  subLocations: (ward) => req("/sublocations" + (ward ? `?ward=${encodeURIComponent(ward)}` : "")),
   categories: () => req("/categories"),
 
   listApps: (scope) => req("/applications" + (scope ? `?scope=${scope}` : "")),
@@ -72,6 +73,9 @@ export const api = {
   adminCreateUser: (payload) => req("/admin/users", { method: "POST", body: payload }),
   adminUpdateUser: (id, payload) => req(`/admin/users/${id}`, { method: "PATCH", body: payload }),
   adminDeleteUser: (id) => req(`/admin/users/${id}`, { method: "DELETE" }),
+  adminListSubLocations: () => req("/admin/sublocations"),
+  adminAddSubLocation: (payload) => req("/admin/sublocations", { method: "POST", body: payload }),
+  adminDeleteSubLocation: (id) => req(`/admin/sublocations/${id}`, { method: "DELETE" }),
 };
 
 export const ROLE_LABEL = {

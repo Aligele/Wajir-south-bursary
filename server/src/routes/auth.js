@@ -45,7 +45,7 @@ r.post("/login", async (req, res) => {
 
   const safe = {
     id: user.id, full_name: user.full_name, email: user.email,
-    role: user.role, phone: user.phone, ward: user.ward,
+    role: user.role, phone: user.phone, ward: user.ward, sub_location: user.sub_location,
   };
   res.json({ token: sign(safe), user: safe });
 });

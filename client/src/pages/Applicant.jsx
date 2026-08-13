@@ -114,7 +114,7 @@ function ApplyForm({ category, wards, onDone, onBack }) {
   const blank = {
     student_name: "", gender: "", admission_no: "", institution: "",
     course_name: category.courses[0]?.name || "",
-    ward: wards[0] || "", guardian_name: "", phone: "",
+    ward: wards[0] || "", sub_location: "", guardian_name: "", phone: "",
     id_number: "", amount_requested: "", annual_fees: "", reason: "",
   };
   const [f, setF] = useState(blank);
@@ -122,11 +122,21 @@ function ApplyForm({ category, wards, onDone, onBack }) {
   const [busy, setBusy] = useState(false);
   const [files, setFiles] = useState([]);
   const [declared, setDeclared] = useState(false);
+  const [subLocs, setSubLocs] = useState([]);
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
 
   useEffect(() => {
     if (wards.length && !f.ward) set("ward", wards[0]);
   }, [wards]);
+
+  useEffect(() => {
+    if (!f.ward) return;
+    api.subLocations(f.ward).then((d) => {
+      setSubLocs(d.subLocations);
+      // reset the pick if it no longer belongs to the newly selected ward
+      set("sub_location", "");
+    }).catch(() => setSubLocs([]));
+  }, [f.ward]);
 
   function addFiles(e) {
     const picked = Array.from(e.target.files || []);
@@ -237,6 +247,19 @@ function ApplyForm({ category, wards, onDone, onBack }) {
               Bursaries are only for residents of Wajir South's seven wards. A parent/guardian may
               register and submit on behalf of a student relative — that's expected.
             </div>
+          </div>
+          <div>
+            <div className="label mb-1">Sub-location</div>
+            {subLocs.length > 0 ? (
+              <select className="field" value={f.sub_location} onChange={(e) => set("sub_location", e.target.value)}>
+                <option value="">Select…</option>
+                {subLocs.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+              </select>
+            ) : (
+              <input className="field" value={f.sub_location} onChange={(e) => set("sub_location", e.target.value)}
+                placeholder="Type your sub-location" />
+            )}
+            <div className="text-[11px] text-ink-soft mt-1">Used to route your application to the Area Chief covering your sub-location.</div>
           </div>
           <Field k="guardian_name" f={f} errors={errors} set={set} label="Parent / guardian name" ph="Full name" />
           <Field k="phone" f={f} errors={errors} set={set} label="Phone number" ph="07XXXXXXXX" />

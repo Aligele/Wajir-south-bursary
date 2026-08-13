@@ -49,6 +49,7 @@ r.post("/", requireAuth, async (req, res) => {
       course_name: b.course_name || null,
       gender: b.gender || null,
       ward: b.ward,
+      sub_location: b.sub_location || null,
       guardian_name: b.guardian_name,
       phone: b.phone,
       id_number: b.id_number,
@@ -78,9 +79,11 @@ r.post("/", requireAuth, async (req, res) => {
 
 // ---- List applications (role-aware) ----
 // applicant: own applications. reviewers: their current-stage queue.
+// A chief with an assigned sub-location only sees applicants from that
+// sub-location; a chief with none assigned sees the general pool.
 // ?scope=all (reviewers) returns everything they can see for reporting.
 r.get("/", requireAuth, async (req, res) => {
-  const { role, id } = req.user;
+  const { role, id, sub_location } = req.user;
   let q = supa.from("applications").select("*").order("created_at", { ascending: false });
 
   if (role === "applicant") {
@@ -88,6 +91,7 @@ r.get("/", requireAuth, async (req, res) => {
   } else if (req.query.scope !== "all") {
     const stage = ROLE_STAGE[role];
     q = q.eq("stage", stage).eq("status", "in_review");
+    if (role === "chief" && sub_location) q = q.eq("sub_location", sub_location);
   }
 
   const { data, error } = await q;
@@ -126,6 +130,8 @@ r.post("/:id/decision", requireAuth, requireRole("chief", "cdf_manager", "clerk"
     const myStage = ROLE_STAGE[req.user.role];
     if (app.stage !== myStage || app.status !== "in_review")
       return res.status(409).json({ error: "This application is not at your stage." });
+    if (req.user.role === "chief" && req.user.sub_location && app.sub_location !== req.user.sub_location)
+      return res.status(403).json({ error: "This application is outside your assigned sub-location." });
 
     let update = {};
     let actionLabel = "Approved";

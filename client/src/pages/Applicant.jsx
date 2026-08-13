@@ -8,6 +8,17 @@ const CATEGORY_ICONS = {
   bachelor:            "🎓",
 };
 
+function Field({ k, label, type = "text", ph, f, errors, set }) {
+  return (
+    <div>
+      <div className="label mb-1">{label}</div>
+      <input className="field" type={type} value={f[k]}
+        onChange={(e) => set(k, e.target.value)} placeholder={ph} />
+      {errors[k] && <div className="text-xs text-brick mt-1">{errors[k]}</div>}
+    </div>
+  );
+}
+
 export default function Applicant({ toast }) {
   const [tab, setTab] = useState("apply");
   const [wards, setWards] = useState([]);
@@ -162,15 +173,6 @@ function ApplyForm({ category, wards, onDone, onBack }) {
     setBusy(false);
   }
 
-  const Field = ({ k, label, type = "text", ph }) => (
-    <div>
-      <div className="label mb-1">{label}</div>
-      <input className="field" type={type} value={f[k]}
-        onChange={(e) => set(k, e.target.value)} placeholder={ph} />
-      {errors[k] && <div className="text-xs text-brick mt-1">{errors[k]}</div>}
-    </div>
-  );
-
   return (
     <div className="space-y-4">
       {/* category breadcrumb */}
@@ -211,10 +213,10 @@ function ApplyForm({ category, wards, onDone, onBack }) {
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
-          <Field k="student_name" label="Student full name" ph="e.g. Amina Hassan Abdi" />
-          <Field k="admission_no" label="Admission / registration no." ph="Optional" />
+          <Field k="student_name" f={f} errors={errors} set={set} label="Student full name" ph="e.g. Amina Hassan Abdi" />
+          <Field k="admission_no" f={f} errors={errors} set={set} label="Admission / registration no." ph="Optional" />
           <div className="sm:col-span-2">
-            <Field k="institution" label="Institution name" ph="School / College / University" />
+            <Field k="institution" f={f} errors={errors} set={set} label="Institution name" ph="School / College / University" />
           </div>
           <div>
             <div className="label mb-1">Ward</div>
@@ -226,11 +228,11 @@ function ApplyForm({ category, wards, onDone, onBack }) {
               register and submit on behalf of a student relative — that's expected.
             </div>
           </div>
-          <Field k="guardian_name" label="Parent / guardian name" ph="Full name" />
-          <Field k="phone" label="Phone number" ph="07XXXXXXXX" />
-          <Field k="id_number" label="Guardian national ID" ph="e.g. 12345678" />
-          <Field k="amount_requested" label="Amount requested (KES)" type="number" ph="e.g. 20000" />
-          <Field k="annual_fees" label="Total annual fees (KES)" type="number" ph="Optional" />
+          <Field k="guardian_name" f={f} errors={errors} set={set} label="Parent / guardian name" ph="Full name" />
+          <Field k="phone" f={f} errors={errors} set={set} label="Phone number" ph="07XXXXXXXX" />
+          <Field k="id_number" f={f} errors={errors} set={set} label="Guardian national ID" ph="e.g. 12345678" />
+          <Field k="amount_requested" f={f} errors={errors} set={set} label="Amount requested (KES)" type="number" ph="e.g. 20000" />
+          <Field k="annual_fees" f={f} errors={errors} set={set} label="Total annual fees (KES)" type="number" ph="Optional" />
         </div>
 
         <div>

@@ -6,6 +6,7 @@ import appRoutes from "./routes/applications.js";
 import docRoutes from "./routes/documents.js";
 import reportRoutes from "./routes/reports.js";
 import categoryRoutes from "./routes/categories.js";
+import adminRoutes from "./routes/admin.js";
 import { supa } from "./lib/supabase.js";
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/applications", appRoutes);
 app.use("/api/documents", docRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use((_req, res) => res.status(404).json({ error: "Not found." }));
 

@@ -4,6 +4,7 @@ import { Seal } from "./components/UI.jsx";
 import Login from "./pages/Login.jsx";
 import Applicant from "./pages/Applicant.jsx";
 import Reviewer from "./pages/Reviewer.jsx";
+import Admin from "./pages/Admin.jsx";
 
 export default function App() {
   const [user, setUser] = useState(getUser());
@@ -46,6 +47,8 @@ export default function App() {
       <main className="px-4 py-6">
         {user.role === "applicant"
           ? <Applicant toast={toast} />
+          : user.role === "admin"
+          ? <Admin toast={toast} />
           : <Reviewer user={user} toast={toast} />}
       </main>
 

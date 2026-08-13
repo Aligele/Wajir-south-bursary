@@ -64,6 +64,11 @@ export const api = {
     const q = new URLSearchParams(params).toString();
     return `${BASE}/reports/${kind}${q ? "?" + q : ""}`;
   },
+
+  adminListUsers: () => req("/admin/users"),
+  adminCreateUser: (payload) => req("/admin/users", { method: "POST", body: payload }),
+  adminUpdateUser: (id, payload) => req(`/admin/users/${id}`, { method: "PATCH", body: payload }),
+  adminDeleteUser: (id) => req(`/admin/users/${id}`, { method: "DELETE" }),
 };
 
 export const ROLE_LABEL = {
@@ -72,4 +77,5 @@ export const ROLE_LABEL = {
   clerk: "Clerk",
   chairman: "Chairman",
   mp: "Member of Parliament",
+  admin: "Administrator",
 };

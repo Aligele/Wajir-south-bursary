@@ -25,7 +25,10 @@ export const supaStorage = createClient(url, key, {
 export const DOCS_BUCKET = process.env.SUPABASE_DOCS_BUCKET || "bursary-docs";
 
 // ---- Workflow definition ----
+// Applicant -> Area Chief (residency/need endorsement) -> CDF Manager ->
+// Clerk -> Chairman -> MP -> Approved
 export const ROLE_STAGE = {
+  chief: "chief",
   cdf_manager: "manager",
   clerk: "clerk",
   chairman: "chairman",
@@ -33,7 +36,8 @@ export const ROLE_STAGE = {
 };
 
 export const NEXT_STAGE = {
-  submitted: "manager",
+  submitted: "chief",
+  chief: "manager",
   manager: "clerk",
   clerk: "chairman",
   chairman: "mp",

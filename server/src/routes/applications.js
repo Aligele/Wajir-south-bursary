@@ -10,7 +10,7 @@ const genId = () =>
   Math.floor(Math.random() * 90 + 10);
 
 const STAGE_LABEL = {
-  submitted: "Submitted", manager: "CDF Manager", clerk: "Clerk",
+  submitted: "Submitted", chief: "Area Chief", manager: "CDF Manager", clerk: "Clerk",
   chairman: "Chairman", mp: "MP", approved: "Approved",
 };
 
@@ -70,10 +70,10 @@ r.post("/", requireAuth, async (req, res) => {
     actor_role: req.user.role, action: "Submitted", note: "",
   });
 
-  // advance immediately into the manager queue
-  await supa.from("applications").update({ stage: "manager" }).eq("id", id);
+  // advance immediately into the area chief's queue
+  await supa.from("applications").update({ stage: "chief" }).eq("id", id);
 
-  res.json({ application: { ...data, stage: "manager" } });
+  res.json({ application: { ...data, stage: "chief" } });
 });
 
 // ---- List applications (role-aware) ----
@@ -113,7 +113,7 @@ r.get("/:id", requireAuth, async (req, res) => {
 });
 
 // ---- Decision: approve / return / reject ----
-r.post("/:id/decision", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp"),
+r.post("/:id/decision", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"),
   async (req, res) => {
     const { action, note, award_amount } = req.body || {};
     if (!["approve", "return", "reject"].includes(action))
@@ -178,7 +178,7 @@ r.post("/:id/decision", requireAuth, requireRole("cdf_manager", "clerk", "chairm
   });
 
 // ---- Acknowledge a red-flagged application (any reviewer) so it can proceed ----
-r.post("/:id/acknowledge-flag", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp"),
+r.post("/:id/acknowledge-flag", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"),
   async (req, res) => {
     const { data: app } = await supa
       .from("applications").select("id, flagged, flag_reason").eq("id", req.params.id).single();

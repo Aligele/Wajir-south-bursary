@@ -10,7 +10,7 @@ const STATUS_LABEL = {
   rejected: "Rejected", returned: "Returned",
 };
 const STAGE_LABEL = {
-  submitted: "Submitted", manager: "CDF Manager", clerk: "Clerk",
+  submitted: "Submitted", chief: "Area Chief", manager: "CDF Manager", clerk: "Clerk",
   chairman: "Chairman", mp: "MP", approved: "Approved",
 };
 
@@ -23,7 +23,7 @@ async function fetchAll(filters = {}) {
 }
 
 // Summary KPIs for a dashboard
-r.get("/summary", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp"), async (_req, res) => {
+r.get("/summary", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"), async (_req, res) => {
   const rows = await fetchAll();
   const total = rows.length;
   const approved = rows.filter((a) => a.status === "approved");
@@ -42,7 +42,7 @@ r.get("/summary", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "
 
 // Detailed analytics: by ward, by category, by ward+category, by gender/age
 // bracket, top institutions, and flagged count.
-r.get("/analytics", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp", "admin"), async (_req, res) => {
+r.get("/analytics", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp", "admin"), async (_req, res) => {
   const rows = await fetchAll();
 
   const byWard = {};
@@ -96,7 +96,7 @@ r.get("/analytics", requireAuth, requireRole("cdf_manager", "clerk", "chairman",
 });
 
 
-r.get("/csv", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
+r.get("/csv", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
   const rows = await fetchAll({ status: req.query.status, ward: req.query.ward });
   const headers = [
     "ID", "Student", "Institution", "Level", "Ward", "Guardian", "Phone",
@@ -118,7 +118,7 @@ r.get("/csv", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp")
 });
 
 // PDF export
-r.get("/pdf", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
+r.get("/pdf", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
   const rows = await fetchAll({ status: req.query.status, ward: req.query.ward });
   const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
 

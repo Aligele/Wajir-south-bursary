@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { api, getToken, ROLE_LABEL } from "../lib/api.js";
 import { Pipeline, StatusTag, money, fmtDate } from "../components/UI.jsx";
 
-const STAGE_LABEL = { submitted: "Submitted", manager: "CDF Manager", clerk: "Clerk", chairman: "Chairman", mp: "MP", approved: "Approved" };
+const STAGE_LABEL = { submitted: "Submitted", chief: "Area Chief", manager: "CDF Manager", clerk: "Clerk", chairman: "Chairman", mp: "MP", approved: "Approved" };
 
 const CAT_TABS = [
   { key: "all",                 label: "All" },
@@ -96,7 +96,7 @@ export default function Reviewer({ user, toast }) {
 }
 
 function Kpis({ apps, view, role }) {
-  const awaiting = view === "queue" ? apps.length : apps.filter((a) => a.stage === {cdf_manager:"manager",clerk:"clerk",chairman:"chairman",mp:"mp"}[role] && a.status === "in_review").length;
+  const awaiting = view === "queue" ? apps.length : apps.filter((a) => a.stage === {chief:"chief",cdf_manager:"manager",clerk:"clerk",chairman:"chairman",mp:"mp"}[role] && a.status === "in_review").length;
   const approved = apps.filter((a) => a.status === "approved").length;
   return (
     <div className="grid grid-cols-3 gap-3">
@@ -219,7 +219,7 @@ function Drawer({ id, user, onClose, onDone, toast }) {
 
   useEffect(() => { api.getApp(id).then((d) => { setData(d); setAward(d.application.amount_requested); }); }, [id]);
 
-  const myStage = { cdf_manager: "manager", clerk: "clerk", chairman: "chairman", mp: "mp" }[user.role];
+  const myStage = { chief: "chief", cdf_manager: "manager", clerk: "clerk", chairman: "chairman", mp: "mp" }[user.role];
   const app = data?.application;
   const canAct = app && app.stage === myStage && app.status === "in_review" && !app.flagged;
 

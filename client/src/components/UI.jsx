@@ -2,6 +2,7 @@ import React from "react";
 
 const STAGES = [
   { key: "submitted", label: "Submitted" },
+  { key: "chief", label: "Area Chief" },
   { key: "manager", label: "CDF Manager" },
   { key: "clerk", label: "Clerk" },
   { key: "chairman", label: "Chairman" },

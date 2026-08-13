@@ -76,6 +76,7 @@ export const api = {
 
 export const ROLE_LABEL = {
   applicant: "Applicant",
+  chief: "Area Chief",
   cdf_manager: "CDF Manager",
   clerk: "Clerk",
   chairman: "Chairman",

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { api, ROLE_LABEL } from "../lib/api.js";
 
-const ROLES = ["applicant", "cdf_manager", "clerk", "chairman", "mp", "admin"];
+const ROLES = ["applicant", "chief", "cdf_manager", "clerk", "chairman", "mp", "admin"];
 
 export default function Admin({ toast }) {
   const [users, setUsers] = useState([]);

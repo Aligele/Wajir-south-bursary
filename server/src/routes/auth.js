@@ -4,7 +4,7 @@ import { supa } from "../lib/supabase.js";
 import { sign, requireAuth } from "../middleware/auth.js";
 
 const r = Router();
-const VALID_ROLES = ["applicant", "cdf_manager", "clerk", "chairman", "mp"];
+const VALID_ROLES = ["applicant", "chief", "cdf_manager", "clerk", "chairman", "mp"];
 
 r.post("/register", async (req, res) => {
   const { full_name, email, phone, password, role, ward } = req.body || {};

@@ -4,7 +4,7 @@ import { supa } from "../lib/supabase.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 
 const r = Router();
-const VALID_ROLES = ["applicant", "cdf_manager", "clerk", "chairman", "mp", "admin"];
+const VALID_ROLES = ["applicant", "chief", "cdf_manager", "clerk", "chairman", "mp", "admin"];
 
 // All routes here require admin
 r.use(requireAuth, requireRole("admin"));

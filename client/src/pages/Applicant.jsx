@@ -112,7 +112,7 @@ function CategoryPicker({ categories, wards, onDone }) {
 /* ── Step 2: fill the application form ── */
 function ApplyForm({ category, wards, onDone, onBack }) {
   const blank = {
-    student_name: "", admission_no: "", institution: "",
+    student_name: "", gender: "", admission_no: "", institution: "",
     course_name: category.courses[0]?.name || "",
     ward: wards[0] || "", guardian_name: "", phone: "",
     id_number: "", amount_requested: "", annual_fees: "", reason: "",
@@ -140,6 +140,7 @@ function ApplyForm({ category, wards, onDone, onBack }) {
   function validate() {
     const e = {};
     if (!f.student_name.trim()) e.student_name = "Required";
+    if (!f.gender) e.gender = "Select gender";
     if (!f.institution.trim()) e.institution = "Required";
     if (!f.course_name) e.course_name = "Select a course";
     if (!f.guardian_name.trim()) e.guardian_name = "Required";
@@ -214,6 +215,15 @@ function ApplyForm({ category, wards, onDone, onBack }) {
 
         <div className="grid sm:grid-cols-2 gap-4">
           <Field k="student_name" f={f} errors={errors} set={set} label="Student full name" ph="e.g. Amina Hassan Abdi" />
+          <div>
+            <div className="label mb-1">Gender</div>
+            <select className="field" value={f.gender} onChange={(e) => set("gender", e.target.value)}>
+              <option value="">Select…</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+            {errors.gender && <div className="text-xs text-brick mt-1">{errors.gender}</div>}
+          </div>
           <Field k="admission_no" f={f} errors={errors} set={set} label="Admission / registration no." ph="Optional" />
           <div className="sm:col-span-2">
             <Field k="institution" f={f} errors={errors} set={set} label="Institution name" ph="School / College / University" />

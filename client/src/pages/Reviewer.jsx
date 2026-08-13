@@ -12,10 +12,11 @@ const CAT_TABS = [
 ];
 
 export default function Reviewer({ user, toast }) {
-  const [view, setView] = useState("queue"); // queue | all | reports
+  const [view, setView] = useState("queue"); // queue | all | analytics | reports
   const [catFilter, setCatFilter] = useState("all");
   const [apps, setApps] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState(null);
 
@@ -25,6 +26,7 @@ export default function Reviewer({ user, toast }) {
       const d = await api.listApps(view === "all" || view === "reports" ? "all" : undefined);
       setApps(d.applications);
       if (view === "reports") setSummary(await api.summary());
+      if (view === "analytics") setAnalytics(await api.analytics());
     } catch (e) { toast(e.message); }
     setLoading(false);
   }
@@ -33,47 +35,57 @@ export default function Reviewer({ user, toast }) {
   const filteredApps = catFilter === "all" ? apps
     : apps.filter((a) => a.edu_category === catFilter);
 
+  const tabs = [["queue", "My review queue"], ["all", "All applications"], ["analytics", "Analytics"], ["reports", "Reports"]];
+
   return (
     <div className="max-w-4xl mx-auto space-y-5">
-      <div className="inline-flex gap-1 bg-sand-2 border border-line rounded-xl p-1">
-        {[["queue", "My review queue"], ["all", "All applications"], ["reports", "Reports"]].map(([k, l]) => (
+      <div className="inline-flex flex-wrap gap-1 bg-sand-2 border border-line rounded-xl p-1">
+        {tabs.map(([k, l]) => (
           <button key={k} onClick={() => setView(k)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${view === k ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>{l}</button>
         ))}
       </div>
 
-      {view === "reports"
-        ? <Reports summary={summary} />
-        : <>
-            <Kpis apps={apps} view={view} role={user.role} />
+      {view === "reports" ? (
+        <Reports summary={summary} />
+      ) : view === "analytics" ? (
+        <Analytics data={analytics} loading={loading} />
+      ) : (
+        <>
+          <Kpis apps={apps} view={view} role={user.role} />
 
-            {/* Category filter */}
-            <div className="flex flex-wrap gap-2">
-              {CAT_TABS.map((t) => {
-                const count = t.key === "all" ? apps.length : apps.filter((a) => a.edu_category === t.key).length;
-                return (
-                  <button key={t.key} onClick={() => setCatFilter(t.key)}
-                    className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold border transition
-                      ${catFilter === t.key ? "bg-green text-white border-green" : "bg-paper border-line text-ink-soft hover:border-gold"}`}>
-                    {t.label}
-                    <span className={`text-[11px] rounded-full px-1.5 py-0.5 font-bold ${catFilter === t.key ? "bg-white/20" : "bg-sand-2"}`}>{count}</span>
-                  </button>
-                );
-              })}
-            </div>
+          {user.role === "mp" && view === "queue" && (
+            <BulkAward apps={apps} toast={toast} onDone={refresh} />
+          )}
 
-            <div>
-              <h2 className="text-lg font-extrabold text-green-d">
-                {ROLE_LABEL[user.role]} · {view === "queue" ? "awaiting your review" : "all applications"}
-                {catFilter !== "all" && <span className="text-gold-d"> · {CAT_TABS.find(t=>t.key===catFilter)?.label}</span>}
-              </h2>
-              <p className="text-sm text-ink-soft mt-0.5">
-                {view === "queue"
-                  ? "Applications reach you after the previous office approves."
-                  : "A full view of every application in the system."}
-              </p>
-            </div>
-            <QueueList apps={filteredApps} loading={loading} onOpen={setOpenId} view={view} />
-          </>}
+          {/* Category filter */}
+          <div className="flex flex-wrap gap-2">
+            {CAT_TABS.map((t) => {
+              const count = t.key === "all" ? apps.length : apps.filter((a) => a.edu_category === t.key).length;
+              return (
+                <button key={t.key} onClick={() => setCatFilter(t.key)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold border transition
+                    ${catFilter === t.key ? "bg-green text-white border-green" : "bg-paper border-line text-ink-soft hover:border-gold"}`}>
+                  {t.label}
+                  <span className={`text-[11px] rounded-full px-1.5 py-0.5 font-bold ${catFilter === t.key ? "bg-white/20" : "bg-sand-2"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div>
+            <h2 className="text-lg font-extrabold text-green-d">
+              {ROLE_LABEL[user.role]} · {view === "queue" ? "awaiting your review" : "all applications"}
+              {catFilter !== "all" && <span className="text-gold-d"> · {CAT_TABS.find(t=>t.key===catFilter)?.label}</span>}
+            </h2>
+            <p className="text-sm text-ink-soft mt-0.5">
+              {view === "queue"
+                ? "Applications reach you after the previous office approves."
+                : "A full view of every application in the system."}
+            </p>
+          </div>
+          <QueueList apps={filteredApps} loading={loading} onOpen={setOpenId} view={view} />
+        </>
+      )}
 
       {openId && (
         <Drawer id={openId} user={user} onClose={() => setOpenId(null)}
@@ -98,6 +110,67 @@ function Kpis({ apps, view, role }) {
   );
 }
 
+function BulkAward({ apps, toast, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("high_school");
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const matching = apps.filter((a) => a.edu_category === category);
+  const flaggedCount = matching.filter((a) => a.flagged).length;
+
+  async function apply() {
+    if (!(Number(amount) > 0)) return toast("Enter a valid amount.");
+    const label = CAT_TABS.find((t) => t.key === category)?.label || category;
+    if (!confirm(`Award ${money(amount)} to all ${matching.length - flaggedCount} eligible ${label} applicant(s) in your queue right now?`)) return;
+    setBusy(true);
+    try {
+      const r = await api.bulkAward({ edu_category: category, amount: Number(amount) });
+      toast(`Awarded ${r.awarded} application(s).` + (r.skipped ? ` ${r.skipped} skipped (flagged).` : ""));
+      setOpen(false); setAmount("");
+      onDone();
+    } catch (e) { toast(e.message); }
+    setBusy(false);
+  }
+
+  return (
+    <div className="card">
+      <button className="w-full flex items-center justify-between text-left" onClick={() => setOpen((o) => !o)}>
+        <div>
+          <div className="font-bold text-ink">Give one amount to a whole category</div>
+          <div className="text-xs text-ink-soft mt-0.5">Award every applicant in a category the same amount at once, instead of one by one.</div>
+        </div>
+        <span className="text-gold-d text-lg">{open ? "−" : "+"}</span>
+      </button>
+      {open && (
+        <div className="mt-4 space-y-3 pt-4 border-t border-line">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <div className="label mb-1">Category</div>
+              <select className="field" value={category} onChange={(e) => setCategory(e.target.value)}>
+                {CAT_TABS.filter((t) => t.key !== "all").map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <div className="label mb-1">Amount per applicant (KES)</div>
+              <input className="field" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 15000" />
+            </div>
+          </div>
+          <div className="text-sm text-ink-soft">
+            {matching.length} applicant(s) waiting in this category
+            {flaggedCount > 0 && <span className="text-brick font-semibold"> · {flaggedCount} flagged (will be skipped until cleared)</span>}
+          </div>
+          <div className="flex justify-end">
+            <button className="btn-primary" onClick={apply} disabled={busy || !matching.length}>
+              {busy ? "Awarding…" : "Award all now"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QueueList({ apps, loading, onOpen, view }) {
   if (loading) return <div className="card text-ink-soft">Loading…</div>;
   if (!apps.length) return (
@@ -113,7 +186,10 @@ function QueueList({ apps, loading, onOpen, view }) {
           className="card w-full text-left space-y-3.5 hover:border-gold transition active:translate-y-px">
           <div className="flex justify-between items-start gap-3">
             <div>
-              <div className="font-bold text-ink">{a.student_name}</div>
+              <div className="flex items-center gap-2">
+                <div className="font-bold text-ink">{a.student_name}</div>
+                {a.flagged && <span className="tag bg-[#f6ddd6] text-brick">⚠ Flagged</span>}
+              </div>
               <div className="text-xs text-ink-soft mt-0.5">
                 {a.id} · {a.institution}
                 {a.course_name && <> · <span className="font-semibold text-green-d">{a.course_name}</span></>}
@@ -139,12 +215,24 @@ function Drawer({ id, user, onClose, onDone, toast }) {
   const [note, setNote] = useState("");
   const [award, setAward] = useState("");
   const [busy, setBusy] = useState(false);
+  const [ackBusy, setAckBusy] = useState(false);
 
   useEffect(() => { api.getApp(id).then((d) => { setData(d); setAward(d.application.amount_requested); }); }, [id]);
 
   const myStage = { cdf_manager: "manager", clerk: "clerk", chairman: "chairman", mp: "mp" }[user.role];
   const app = data?.application;
-  const canAct = app && app.stage === myStage && app.status === "in_review";
+  const canAct = app && app.stage === myStage && app.status === "in_review" && !app.flagged;
+
+  async function acknowledgeFlag() {
+    setAckBusy(true);
+    try {
+      await api.acknowledgeFlag(id);
+      const fresh = await api.getApp(id);
+      setData(fresh);
+      toast("Flag cleared — you can now review normally.");
+    } catch (e) { toast(e.message); }
+    setAckBusy(false);
+  }
 
   async function act(action) {
     setBusy(true);
@@ -179,8 +267,22 @@ function Drawer({ id, user, onClose, onDone, toast }) {
               <StatusTag status={app.status} />
               <Pipeline stage={app.stage} status={app.status} />
 
+              {app.flagged && (
+                <div className="card !bg-[#f6ddd6] !border-brick space-y-2.5">
+                  <div className="flex items-center gap-2 text-brick font-extrabold">
+                    <span className="text-lg">⚠</span> Needs confirmation before review
+                  </div>
+                  <p className="text-sm text-ink">{app.flag_reason}</p>
+                  <button className="btn-primary !bg-brick" onClick={acknowledgeFlag} disabled={ackBusy}>
+                    {ackBusy ? "Clearing…" : "I've checked this — allow review"}
+                  </button>
+                </div>
+              )}
+
+
               <div className="card grid grid-cols-2 gap-x-4 gap-y-3">
                 {[["Institution", app.institution], ["Level", app.level], ["Ward", app.ward],
+                  ["Gender", app.gender ? (app.gender === "male" ? "Male" : "Female") : "—"],
                   ["Admission no.", app.admission_no || "—"], ["Guardian", app.guardian_name],
                   ["Phone", app.phone], ["Guardian ID", app.id_number], ["Applied", fmtDate(app.created_at)],
                 ].map(([k, v]) => (
@@ -258,7 +360,7 @@ function Drawer({ id, user, onClose, onDone, toast }) {
                     </button>
                   </div>
                 </div>
-              ) : (
+              ) : app.flagged ? null : (
                 <div className="card text-sm text-ink-soft">
                   This application is at the <strong className="text-ink">{STAGE_LABEL[app.stage]}</strong> stage — not yours to action.
                 </div>
@@ -318,6 +420,84 @@ function Reports({ summary }) {
         <button className="btn-ghost" onClick={() => download("csv")}>Download CSV</button>
         <button className="btn-primary" onClick={() => download("pdf")}>Download PDF</button>
       </div>
+    </div>
+  );
+}
+
+function Bar({ label, n, total, color = "bg-green" }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-32 sm:w-40 text-sm text-ink truncate flex-shrink-0">{label}</div>
+      <div className="flex-1 h-2.5 rounded-full bg-sand-2 overflow-hidden">
+        <div className={`h-full ${color}`} style={{ width: `${total ? (n / total) * 100 : 0}%` }} />
+      </div>
+      <div className="w-8 text-right text-sm font-bold text-green-d flex-shrink-0">{n}</div>
+    </div>
+  );
+}
+
+function Analytics({ data, loading }) {
+  if (loading && !data) return <div className="card text-ink-soft">Loading…</div>;
+  if (!data) return null;
+
+  const wardEntries = Object.entries(data.by_ward).sort((a, b) => b[1] - a[1]);
+  const catEntries = Object.entries(data.by_category).sort((a, b) => b[1] - a[1]);
+  const demo = data.demographics;
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[["Total applications", data.total], ["University (Bachelor's)", data.university_total],
+          ["Flagged", data.flagged_count], ["Wards represented", wardEntries.length]].map(([l, v]) => (
+          <div key={l} className="card py-4">
+            <div className="text-2xl font-extrabold text-green-d leading-none">{v}</div>
+            <div className="text-xs text-ink-soft font-semibold mt-1">{l}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card">
+        <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-3">Applications by ward</div>
+        <div className="space-y-2">
+          {wardEntries.map(([ward, n]) => <Bar key={ward} label={ward} n={n} total={data.total} />)}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-3">Applications by education category</div>
+        <div className="space-y-2">
+          {catEntries.map(([cat, n]) => <Bar key={cat} label={cat} n={n} total={data.total} color="bg-gold" />)}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-3">Students by gender &amp; level</div>
+        <div className="grid grid-cols-2 gap-3">
+          {[["Boys (school-age)", demo.boys], ["Girls (school-age)", demo.girls],
+            ["Men (tertiary)", demo.men], ["Ladies (tertiary)", demo.ladies]].map(([l, v]) => (
+            <div key={l} className="bg-sand-2 rounded-lg px-3 py-2.5">
+              <div className="text-xl font-extrabold text-green-d">{v}</div>
+              <div className="text-xs text-ink-soft font-semibold">{l}</div>
+            </div>
+          ))}
+        </div>
+        {demo.unspecified > 0 && (
+          <div className="text-xs text-ink-soft mt-2">{demo.unspecified} application(s) didn't record gender.</div>
+        )}
+      </div>
+
+      {data.top_institutions.length > 0 && (
+        <div className="card">
+          <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-3">
+            University applicants by institution
+          </div>
+          <div className="space-y-2">
+            {data.top_institutions.map((inst) => (
+              <Bar key={inst.name} label={inst.name} n={inst.count} total={data.university_total} color="bg-[#2f5a7a]" />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

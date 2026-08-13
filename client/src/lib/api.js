@@ -50,6 +50,8 @@ export const api = {
   getApp: (id) => req(`/applications/${id}`),
   submitApp: (payload) => req("/applications", { method: "POST", body: payload }),
   decide: (id, payload) => req(`/applications/${id}/decision`, { method: "POST", body: payload }),
+  acknowledgeFlag: (id) => req(`/applications/${id}/acknowledge-flag`, { method: "POST" }),
+  bulkAward: (payload) => req("/applications/bulk-award", { method: "POST", body: payload }),
 
   uploadDoc: (appId, file, label) => {
     const fd = new FormData();
@@ -60,6 +62,7 @@ export const api = {
   docLink: (docId) => req(`/documents/${docId}/link`),
 
   summary: () => req("/reports/summary"),
+  analytics: () => req("/reports/analytics"),
   reportUrl: (kind, params = {}) => {
     const q = new URLSearchParams(params).toString();
     return `${BASE}/reports/${kind}${q ? "?" + q : ""}`;

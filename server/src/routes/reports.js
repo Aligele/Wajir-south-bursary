@@ -40,7 +40,62 @@ r.get("/summary", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "
   });
 });
 
-// CSV export
+// Detailed analytics: by ward, by category, by ward+category, by gender/age
+// bracket, top institutions, and flagged count.
+r.get("/analytics", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp", "admin"), async (_req, res) => {
+  const rows = await fetchAll();
+
+  const byWard = {};
+  const byCategory = {};
+  const byWardCategory = {}; // "ward|category" -> count
+  const byInstitution = {};
+  const demo = { boys: 0, girls: 0, men: 0, ladies: 0, unspecified: 0 };
+  let university = 0;
+  let flagged = 0;
+
+  const CAT_LABEL = { high_school: "High School", diploma_certificate: "Diploma & Certificate", bachelor: "Bachelor's Degree" };
+
+  for (const a of rows) {
+    byWard[a.ward] = (byWard[a.ward] || 0) + 1;
+
+    const cat = CAT_LABEL[a.edu_category] || "Uncategorised";
+    byCategory[cat] = (byCategory[cat] || 0) + 1;
+
+    const wcKey = `${a.ward}|${cat}`;
+    byWardCategory[wcKey] = (byWardCategory[wcKey] || 0) + 1;
+
+    if (a.edu_category === "bachelor") {
+      university++;
+      const inst = (a.institution || "Unspecified").trim();
+      byInstitution[inst] = (byInstitution[inst] || 0) + 1;
+    }
+
+    if (a.flagged) flagged++;
+
+    const isAdult = a.edu_category === "diploma_certificate" || a.edu_category === "bachelor";
+    if (a.gender === "male") demo[isAdult ? "men" : "boys"]++;
+    else if (a.gender === "female") demo[isAdult ? "ladies" : "girls"]++;
+    else demo.unspecified++;
+  }
+
+  const topInstitutions = Object.entries(byInstitution)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15)
+    .map(([name, count]) => ({ name, count }));
+
+  res.json({
+    total: rows.length,
+    by_ward: byWard,
+    by_category: byCategory,
+    by_ward_category: byWardCategory,
+    demographics: demo,
+    university_total: university,
+    top_institutions: topInstitutions,
+    flagged_count: flagged,
+  });
+});
+
+
 r.get("/csv", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
   const rows = await fetchAll({ status: req.query.status, ward: req.query.ward });
   const headers = [

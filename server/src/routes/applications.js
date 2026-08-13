@@ -21,6 +21,20 @@ r.post("/", requireAuth, async (req, res) => {
   for (const f of required)
     if (!b[f] && b[f] !== 0) return res.status(400).json({ error: `Missing field: ${f}` });
 
+  // Fraud signal: same guardian ID number previously used with a DIFFERENT ward.
+  // A resident's ID shouldn't reasonably move between wards across applications —
+  // this catches ward-shopping without needing an external government ID database.
+  const { data: priorSameId } = await supa
+    .from("applications")
+    .select("ward")
+    .eq("id_number", b.id_number)
+    .neq("ward", b.ward)
+    .limit(1);
+  const flagged = !!(priorSameId && priorSameId.length);
+  const flag_reason = flagged
+    ? `Guardian ID ${b.id_number} was previously used on an application from ${priorSameId[0].ward} ward — this one claims ${b.ward}.`
+    : null;
+
   const id = genId();
   const { data, error } = await supa
     .from("applications")
@@ -31,6 +45,9 @@ r.post("/", requireAuth, async (req, res) => {
       admission_no: b.admission_no || null,
       institution: b.institution,
       level: b.level,
+      edu_category: b.edu_category || null,
+      course_name: b.course_name || null,
+      gender: b.gender || null,
       ward: b.ward,
       guardian_name: b.guardian_name,
       phone: b.phone,
@@ -40,11 +57,13 @@ r.post("/", requireAuth, async (req, res) => {
       reason: b.reason,
       stage: "submitted",
       status: "in_review",
+      flagged,
+      flag_reason,
     })
     .select("*")
     .single();
 
-  if (error) return res.status(500).json({ error: "Could not submit the application." });
+  if (error) return res.status(500).json({ error: "Could not submit the application.", debug: error.message });
 
   await supa.from("approvals").insert({
     app_id: id, stage: "submitted", actor_id: req.user.id,
@@ -157,5 +176,62 @@ r.post("/:id/decision", requireAuth, requireRole("cdf_manager", "clerk", "chairm
 
     res.json({ ok: true });
   });
+
+// ---- Acknowledge a red-flagged application (any reviewer) so it can proceed ----
+r.post("/:id/acknowledge-flag", requireAuth, requireRole("cdf_manager", "clerk", "chairman", "mp"),
+  async (req, res) => {
+    const { data: app } = await supa
+      .from("applications").select("id, flagged, flag_reason").eq("id", req.params.id).single();
+    if (!app) return res.status(404).json({ error: "Application not found." });
+    if (!app.flagged) return res.json({ ok: true });
+
+    await supa.from("applications").update({ flagged: false }).eq("id", app.id);
+    await supa.from("approvals").insert({
+      app_id: app.id, stage: ROLE_STAGE[req.user.role], actor_id: req.user.id,
+      actor_role: req.user.role, action: "Flag acknowledged",
+      note: app.flag_reason || "",
+    });
+    res.json({ ok: true });
+  });
+
+// ---- MP bulk award: give every application currently at the MP stage within
+// one education category the same award amount, approving them all at once ----
+r.post("/bulk-award", requireAuth, requireRole("mp"), async (req, res) => {
+  const { edu_category, amount, note } = req.body || {};
+  if (!edu_category) return res.status(400).json({ error: "Choose a category." });
+  if (!(Number(amount) > 0)) return res.status(400).json({ error: "Enter a valid amount." });
+
+  const { data: batch, error } = await supa
+    .from("applications")
+    .select("id, applicant_id, student_name, phone, flagged")
+    .eq("stage", "mp").eq("status", "in_review").eq("edu_category", edu_category);
+  if (error) return res.status(500).json({ error: "Could not load applications." });
+
+  const eligible = (batch || []).filter((a) => !a.flagged);
+  const skipped = (batch || []).length - eligible.length;
+  if (!eligible.length)
+    return res.status(400).json({ error: skipped ? "All matching applications are flagged and need review first." : "No applications are waiting at your stage in this category." });
+
+  for (const app of eligible) {
+    await supa.from("applications")
+      .update({ stage: "approved", status: "approved", award_amount: amount })
+      .eq("id", app.id);
+    await supa.from("approvals").insert({
+      app_id: app.id, stage: "mp", actor_id: req.user.id, actor_role: "mp",
+      action: "Approved", note: note || `Bulk award — ${edu_category}`,
+    });
+    const { data: applicant } = await supa
+      .from("users").select("email, phone").eq("id", app.applicant_id).single();
+    await notify({
+      appId: app.id,
+      email: applicant?.email,
+      phone: applicant?.phone || app.phone,
+      subject: `Wajir South Bursary — ${app.id}`,
+      body: `Good news. Bursary ${app.id} for ${app.student_name} has been APPROVED and awarded ${Number(amount).toLocaleString()} KES.`,
+    });
+  }
+
+  res.json({ ok: true, awarded: eligible.length, skipped });
+});
 
 export default r;

@@ -85,20 +85,12 @@ export default function Login({ onAuth }) {
                   <div className="label mb-1">Phone</div>
                   <input className="field" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="07XXXXXXXX" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="label mb-1">Role</div>
-                    <select className="field" value={form.role} onChange={(e) => set("role", e.target.value)}>
-                      {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <div className="label mb-1">Ward</div>
-                    <select className="field" value={form.ward} onChange={(e) => set("ward", e.target.value)}>
-                      <option value="">—</option>
-                      {wards.map((w) => <option key={w}>{w}</option>)}
-                    </select>
-                  </div>
+                <div>
+                  <div className="label mb-1">Ward</div>
+                  <select className="field" value={form.ward} onChange={(e) => set("ward", e.target.value)}>
+                    <option value="">—</option>
+                    {wards.map((w) => <option key={w}>{w}</option>)}
+                  </select>
                 </div>
               </>
             )}
@@ -115,8 +107,8 @@ export default function Login({ onAuth }) {
             </button>
             {mode === "register" && (
               <p className="text-xs text-ink-soft leading-relaxed">
-                Reviewer roles (CDF Manager, Clerk, Chairman, MP) should be assigned by the
-                constituency office. In production, self-registration is limited to applicants.
+                This creates an applicant account. Area Chief, CDF Manager, Clerk, Chairman,
+                MP and Admin accounts are created by the constituency office in the Admin panel.
               </p>
             )}
           </div>

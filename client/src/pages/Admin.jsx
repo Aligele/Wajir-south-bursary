@@ -33,7 +33,7 @@ export default function Admin({ toast }) {
     <div className="max-w-3xl mx-auto space-y-5">
       <div className="inline-flex gap-1 bg-sand-2 border border-line rounded-xl p-1">
         {[["users", "Accounts"], ["sublocations", "Wards & Sub-locations"]].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === k ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${tab === k ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>{l}</button>
         ))}
       </div>
 

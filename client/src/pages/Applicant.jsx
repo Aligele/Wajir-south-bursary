@@ -42,11 +42,11 @@ export default function Applicant({ toast }) {
     <div className="max-w-3xl mx-auto space-y-5">
       <div className="inline-flex gap-1 bg-sand-2 border border-line rounded-xl p-1">
         <button onClick={() => setTab("apply")}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === "apply" ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${tab === "apply" ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
           New application
         </button>
         <button onClick={() => { setTab("track"); refresh(); }}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold ${tab === "track" ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${tab === "track" ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
           Track {apps.length ? `(${apps.length})` : ""}
         </button>
       </div>
@@ -81,7 +81,7 @@ function CategoryPicker({ categories, wards, onDone }) {
       <div className="grid gap-4">
         {categories.map((cat) => (
           <button key={cat.slug} onClick={() => setSelected(cat.slug)}
-            className="card text-left flex items-start gap-5 hover:border-gold hover:shadow-md transition group active:translate-y-px">
+            className="card text-left flex items-start gap-5 hover:border-gold hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group active:translate-y-0 active:shadow-sm animate-fade-up">
             <span className="text-4xl mt-0.5 select-none">{CATEGORY_ICONS[cat.slug]}</span>
             <div className="flex-1 min-w-0">
               <div className="font-extrabold text-lg text-green-d group-hover:text-gold-d transition">
@@ -101,7 +101,7 @@ function CategoryPicker({ categories, wards, onDone }) {
                 )}
               </div>
             </div>
-            <span className="text-gold-d text-xl self-center">→</span>
+            <span className="text-gold-d text-xl self-center transition-transform duration-200 group-hover:translate-x-1">→</span>
           </button>
         ))}
       </div>

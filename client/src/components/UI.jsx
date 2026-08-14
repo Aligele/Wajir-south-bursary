@@ -18,18 +18,23 @@ export function Pipeline({ stage, status }) {
   return (
     <div className="relative flex justify-between gap-1">
       <div className="absolute top-[7px] left-[6%] right-[6%] h-0.5 bg-line" />
+      <div
+        className="absolute top-[7px] left-[6%] h-0.5 bg-green transition-all duration-500 ease-out"
+        style={{ width: `${Math.max(0, (idx / (STAGES.length - 1)) * 88)}%` }}
+      />
       {STAGES.map((s, i) => {
         let dot = "bg-sand-2 border-line";
         let text = "text-ink-soft";
+        let extra = "";
         if ((rejected || returned) && i === idx) {
           dot = rejected ? "bg-brick border-brick" : "bg-[#2f5a7a] border-[#2f5a7a]";
           text = rejected ? "text-brick" : "text-[#2f5a7a]";
         } else if (i < idx) { dot = "bg-green border-green"; text = "text-green-d"; }
-        else if (i === idx) { dot = "bg-gold border-gold-d ring-4 ring-gold/20"; text = "text-gold-d font-extrabold"; }
+        else if (i === idx) { dot = "bg-gold border-gold-d"; text = "text-gold-d font-extrabold"; extra = "pulse-ring"; }
         return (
           <div key={s.key} className="relative z-10 flex flex-1 flex-col items-center gap-1.5">
-            <span className={`h-[15px] w-[15px] rounded-full border-2 ${dot}`} />
-            <span className={`text-[9px] font-semibold text-center leading-tight ${text}`}>{s.label}</span>
+            <span className={`h-[15px] w-[15px] rounded-full border-2 transition-colors duration-300 ${dot} ${extra}`} />
+            <span className={`text-[9px] font-semibold text-center leading-tight transition-colors duration-300 ${text}`}>{s.label}</span>
           </div>
         );
       })}
@@ -54,6 +59,28 @@ export function Seal({ size = 34 }) {
       <circle cx="24" cy="24" r="22" fill="none" stroke="#c98a1e" strokeWidth="2" />
       <path d="M24 8 L24 40 M12 16 L36 32 M36 16 L12 32" stroke="#1f5c3d" strokeWidth="2.4" strokeLinecap="round" />
       <circle cx="24" cy="24" r="6" fill="#c98a1e" />
+    </svg>
+  );
+}
+
+export function KenyaFlag({ width = 28 }) {
+  const h = width * 0.667;
+  return (
+    <svg viewBox="0 0 30 20" width={width} height={h} aria-label="Flag of Kenya" className="rounded-[2px] shadow-sm ring-1 ring-black/10">
+      <rect width="30" height="20" fill="#fff" />
+      <rect width="30" height="6.2" fill="#000" />
+      <rect y="6.9" width="30" height="6.2" fill="#c8102e" />
+      <rect y="13.8" width="30" height="6.2" fill="#006600" />
+      <rect y="6.2" width="30" height="0.7" fill="#fff" />
+      <rect y="13.1" width="30" height="0.7" fill="#fff" />
+      <g transform="translate(15,10)">
+        <polygon points="0,-7 2.6,-1 -2.6,-1" fill="#c8102e" stroke="#000" strokeWidth="0.3" />
+        <polygon points="0,7 2.6,1 -2.6,1" fill="#c8102e" stroke="#000" strokeWidth="0.3" />
+        <polygon points="-7,0 -1,2.6 -1,-2.6" fill="#c8102e" stroke="#000" strokeWidth="0.3" />
+        <polygon points="7,0 1,2.6 1,-2.6" fill="#c8102e" stroke="#000" strokeWidth="0.3" />
+        <circle r="2.3" fill="#fff" stroke="#000" strokeWidth="0.3" />
+        <circle r="1.1" fill="#000" />
+      </g>
     </svg>
   );
 }

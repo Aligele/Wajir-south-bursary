@@ -41,7 +41,7 @@ export default function Reviewer({ user, toast }) {
     <div className="max-w-4xl mx-auto space-y-5">
       <div className="inline-flex flex-wrap gap-1 bg-sand-2 border border-line rounded-xl p-1">
         {tabs.map(([k, l]) => (
-          <button key={k} onClick={() => setView(k)} className={`rounded-lg px-4 py-2 text-sm font-semibold ${view === k ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>{l}</button>
+          <button key={k} onClick={() => setView(k)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${view === k ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>{l}</button>
         ))}
       </div>
 
@@ -183,7 +183,7 @@ function QueueList({ apps, loading, onOpen, view }) {
     <div className="space-y-4">
       {apps.map((a) => (
         <button key={a.id} onClick={() => onOpen(a.id)}
-          className="card w-full text-left space-y-3.5 hover:border-gold transition active:translate-y-px">
+          className="card w-full text-left space-y-3.5 hover:border-gold hover:shadow-lg hover:-translate-y-1 transition-all duration-200 active:translate-y-0 active:shadow-sm animate-fade-up">
           <div className="flex justify-between items-start gap-3">
             <div>
               <div className="flex items-center gap-2">
@@ -405,7 +405,7 @@ function Reports({ summary }) {
               <div key={ward} className="flex items-center gap-3">
                 <div className="w-28 text-sm text-ink">{ward}</div>
                 <div className="flex-1 h-2.5 rounded-full bg-sand-2 overflow-hidden">
-                  <div className="h-full bg-green" style={{ width: `${(n / summary.total) * 100}%` }} />
+                  <div className="h-full bg-green transition-all duration-700 ease-out" style={{ width: `${(n / summary.total) * 100}%` }} />
                 </div>
                 <div className="w-8 text-right text-sm font-bold text-green-d">{n}</div>
               </div>
@@ -430,7 +430,7 @@ function Bar({ label, n, total, color = "bg-green" }) {
     <div className="flex items-center gap-3">
       <div className="w-32 sm:w-40 text-sm text-ink truncate flex-shrink-0">{label}</div>
       <div className="flex-1 h-2.5 rounded-full bg-sand-2 overflow-hidden">
-        <div className={`h-full ${color}`} style={{ width: `${total ? (n / total) * 100 : 0}%` }} />
+        <div className={`h-full ${color} transition-all duration-700 ease-out`} style={{ width: `${total ? (n / total) * 100 : 0}%` }} />
       </div>
       <div className="w-8 text-right text-sm font-bold text-green-d flex-shrink-0">{n}</div>
     </div>

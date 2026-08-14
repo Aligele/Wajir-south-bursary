@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api, setSession, ROLE_LABEL } from "../lib/api.js";
-import { Seal } from "../components/UI.jsx";
+import { Seal, KenyaFlag } from "../components/UI.jsx";
 
 export default function Login({ onAuth }) {
   const [mode, setMode] = useState("login");
@@ -31,38 +31,45 @@ export default function Login({ onAuth }) {
       {/* Brand panel */}
       <div className="hidden lg:flex flex-col justify-between bg-green text-sand p-10">
         <div className="flex items-center gap-3">
-          <div className="grid place-items-center h-12 w-12 rounded-full bg-green-d border border-gold">
+          <div className="grid place-items-center h-12 w-12 rounded-full bg-green-d border border-gold transition-transform duration-300 hover:scale-105 hover:rotate-3">
             <Seal size={30} />
           </div>
           <div>
-            <div className="font-extrabold text-lg leading-tight">Wajir South Constituency</div>
+            <div className="flex items-center gap-2">
+              <div className="font-extrabold text-lg leading-tight">Wajir South Constituency</div>
+              <KenyaFlag width={24} />
+            </div>
             <div className="text-xs text-[#cde0d1]">NG-CDF Bursary Programme</div>
           </div>
         </div>
         <div>
-          <h1 className="text-4xl font-extrabold leading-tight">
+          <h1 className="text-4xl font-extrabold leading-tight animate-fade-up">
             Education support,<br />tracked from<br />application to award.
           </h1>
-          <p className="mt-4 max-w-sm text-[#cde0d1] text-sm leading-relaxed">
-            Every application moves through the CDF Manager, Clerk, Chairman and the
+          <p className="mt-4 max-w-sm text-[#cde0d1] text-sm leading-relaxed animate-fade-up" style={{ animationDelay: "0.1s" }}>
+            Every application moves through the Area Chief, CDF Manager, Clerk, Chairman and the
             Member of Parliament — with a clear record at each step.
           </p>
         </div>
-        <div className="text-xs text-[#9dc0a8]">Powered by the NG-CDF · Republic of Kenya</div>
+        <div className="flex items-center gap-2 text-xs text-[#9dc0a8]">
+          <KenyaFlag width={16} />
+          Powered by the NG-CDF · Republic of Kenya
+        </div>
       </div>
 
       {/* Form panel */}
       <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md animate-fade-up">
           <div className="lg:hidden flex items-center gap-3 mb-6">
             <Seal size={34} />
             <div className="font-extrabold text-green-d">Wajir South Bursary</div>
+            <KenyaFlag width={20} />
           </div>
 
           <div className="flex gap-1 bg-sand-2 border border-line rounded-xl p-1 mb-6">
             {["login", "register"].map((m) => (
               <button key={m} onClick={() => { setMode(m); setErr(""); }}
-                className={`flex-1 rounded-lg py-2 text-sm font-semibold ${mode === m ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
+                className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all duration-200 ${mode === m ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
                 {m === "login" ? "Sign in" : "Create account"}
               </button>
             ))}

@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../lib/api.js";
-import { Pipeline, StatusTag, money } from "../components/UI.jsx";
+import { Pipeline, StatusTag, money, WardDot } from "../components/UI.jsx";
 
 const CATEGORY_ICONS = {
   high_school:         "🏫",
   diploma_certificate: "📜",
   bachelor:            "🎓",
+};
+
+// Each category has its own compulsory documents — high school students
+// don't need an admission letter the way a university student does, etc.
+const REQUIRED_DOCS = {
+  high_school: ["Fee structure / bill", "Birth certificate or school ID"],
+  diploma_certificate: ["Admission letter", "Fee structure", "Copy of guardian's ID"],
+  bachelor: ["Admission letter", "Fee structure", "Copy of guardian's ID", "KUCCPS placement letter (if applicable)"],
 };
 
 function Field({ k, label, type = "text", ph, f, errors, set }) {
@@ -25,10 +33,12 @@ export default function Applicant({ toast }) {
   const [categories, setCategories] = useState([]);
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deadline, setDeadline] = useState(null);
 
   useEffect(() => {
     api.wards().then((d) => setWards(d.wards)).catch(() => {});
     api.categories().then((d) => setCategories(d.categories)).catch(() => {});
+    api.settings().then((d) => setDeadline(d.settings.application_deadline)).catch(() => {});
     refresh();
   }, []);
 
@@ -38,8 +48,21 @@ export default function Applicant({ toast }) {
     setLoading(false);
   }
 
+  const deadlinePassed = deadline && new Date() > new Date(deadline);
+  const deadlineSoon = deadline && !deadlinePassed && (new Date(deadline) - new Date()) < 7 * 24 * 60 * 60 * 1000;
+
   return (
     <div className="max-w-3xl mx-auto space-y-5">
+      {deadline && tab === "apply" && (
+        <div className={`card !py-3 ${deadlinePassed ? "!bg-[#f6ddd6] !border-brick" : deadlineSoon ? "!bg-[#fef2d8] !border-gold" : ""}`}>
+          <p className={`text-sm font-semibold ${deadlinePassed ? "text-brick" : deadlineSoon ? "text-gold-d" : "text-ink"}`}>
+            {deadlinePassed
+              ? `Applications closed on ${new Date(deadline).toLocaleDateString("en-KE", { day: "2-digit", month: "long", year: "numeric" })}.`
+              : `Applications close ${new Date(deadline).toLocaleDateString("en-KE", { day: "2-digit", month: "long", year: "numeric" })}${deadlineSoon ? " — closing soon" : ""}.`}
+          </p>
+        </div>
+      )}
+
       <div className="inline-flex gap-1 bg-sand-2 border border-line rounded-xl p-1">
         <button onClick={() => setTab("apply")}
           className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${tab === "apply" ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
@@ -52,7 +75,7 @@ export default function Applicant({ toast }) {
       </div>
 
       {tab === "apply"
-        ? <CategoryPicker categories={categories} wards={wards}
+        ? <CategoryPicker categories={categories} wards={wards} deadlinePassed={deadlinePassed}
             onDone={() => { toast("Application submitted successfully."); setTab("track"); refresh(); }} />
         : <TrackList apps={apps} loading={loading} onChange={refresh} toast={toast} />}
     </div>
@@ -60,7 +83,7 @@ export default function Applicant({ toast }) {
 }
 
 /* ── Step 1: pick a category ── */
-function CategoryPicker({ categories, wards, onDone }) {
+function CategoryPicker({ categories, wards, onDone, deadlinePassed }) {
   const [selected, setSelected] = useState(null);
 
   if (selected) {
@@ -80,8 +103,9 @@ function CategoryPicker({ categories, wards, onDone }) {
 
       <div className="grid gap-4">
         {categories.map((cat) => (
-          <button key={cat.slug} onClick={() => setSelected(cat.slug)}
-            className="card text-left flex items-start gap-5 hover:border-gold hover:shadow-lg hover:-translate-y-1 transition-all duration-200 group active:translate-y-0 active:shadow-sm animate-fade-up">
+          <button key={cat.slug} onClick={() => !deadlinePassed && setSelected(cat.slug)} disabled={deadlinePassed}
+            className={`card text-left flex items-start gap-5 transition-all duration-200 group animate-fade-up
+              ${deadlinePassed ? "opacity-50 cursor-not-allowed" : "hover:border-gold hover:shadow-lg hover:-translate-y-1 active:translate-y-0 active:shadow-sm"}`}>
             <span className="text-4xl mt-0.5 select-none">{CATEGORY_ICONS[cat.slug]}</span>
             <div className="flex-1 min-w-0">
               <div className="font-extrabold text-lg text-green-d group-hover:text-gold-d transition">
@@ -120,9 +144,11 @@ function ApplyForm({ category, wards, onDone, onBack }) {
   const [f, setF] = useState(blank);
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
-  const [files, setFiles] = useState([]);
+  const [docs, setDocs] = useState({}); // label -> File
+  const [extraFiles, setExtraFiles] = useState([]);
   const [declared, setDeclared] = useState(false);
   const [subLocs, setSubLocs] = useState([]);
+  const requiredDocs = REQUIRED_DOCS[category.slug] || [];
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
 
   useEffect(() => {
@@ -138,13 +164,16 @@ function ApplyForm({ category, wards, onDone, onBack }) {
     }).catch(() => setSubLocs([]));
   }, [f.ward]);
 
-  function addFiles(e) {
+  function setDoc(label, file) {
+    setDocs((prev) => ({ ...prev, [label]: file }));
+  }
+  function addExtraFiles(e) {
     const picked = Array.from(e.target.files || []);
-    setFiles((prev) => [...prev, ...picked]);
+    setExtraFiles((prev) => [...prev, ...picked]);
     e.target.value = "";
   }
-  function removeFile(i) {
-    setFiles((prev) => prev.filter((_, idx) => idx !== i));
+  function removeExtraFile(i) {
+    setExtraFiles((prev) => prev.filter((_, idx) => idx !== i));
   }
 
   function validate() {
@@ -159,6 +188,8 @@ function ApplyForm({ category, wards, onDone, onBack }) {
     if (!(Number(f.amount_requested) > 0)) e.amount_requested = "Enter amount";
     if (!f.reason.trim()) e.reason = "Required";
     if (!declared) e.declared = "You must confirm residency to submit";
+    const missingDocs = requiredDocs.filter((label) => !docs[label]);
+    if (missingDocs.length) e.docs = `Attach: ${missingDocs.join(", ")}`;
     setErrors(e);
     return !Object.keys(e).length;
   }
@@ -174,10 +205,16 @@ function ApplyForm({ category, wards, onDone, onBack }) {
         amount_requested: Number(f.amount_requested),
         annual_fees: Number(f.annual_fees) || 0,
       });
-      // upload any attached documents against the newly created application
-      for (const file of files) {
-        try { await api.uploadDoc(application.id, file, file.name); }
+      // upload required documents first, tagged with their specific label
+      for (const label of requiredDocs) {
+        const file = docs[label];
+        if (!file) continue;
+        try { await api.uploadDoc(application.id, file, label); }
         catch { /* one failed upload shouldn't block the rest */ }
+      }
+      for (const file of extraFiles) {
+        try { await api.uploadDoc(application.id, file, file.name); }
+        catch { /* */ }
       }
       onDone();
     } catch (e) { alert(e.message); }
@@ -277,27 +314,46 @@ function ApplyForm({ category, wards, onDone, onBack }) {
         </div>
 
         <div className="bg-sand-2 border border-line rounded-xl p-4">
-          <div className="label mb-1">Supporting documents</div>
+          <div className="label mb-1">Required documents</div>
           <p className="text-xs text-ink-soft mb-3">
-            Attach a fee structure, guardian ID copy, or result slip. You can also add these later
-            from the Track tab.
+            All of these are compulsory for a {category.label} application — attach each one below.
           </p>
-          <label className="inline-flex items-center gap-2 text-sm font-semibold text-gold-d cursor-pointer">
-            <input type="file" multiple className="hidden" onChange={addFiles} />
-            <span className="border border-line rounded-lg px-3 py-2 bg-paper hover:border-gold">
-              + Choose files
-            </span>
-          </label>
-          {files.length > 0 && (
-            <ul className="mt-3 space-y-1.5">
-              {files.map((file, i) => (
-                <li key={i} className="flex items-center justify-between text-sm bg-paper border border-line rounded-lg px-3 py-1.5">
-                  <span className="truncate">📎 {file.name}</span>
-                  <button type="button" onClick={() => removeFile(i)} className="text-brick font-bold text-xs ml-2 flex-shrink-0">Remove</button>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="space-y-2.5">
+            {requiredDocs.map((label) => (
+              <div key={label} className="flex items-center justify-between gap-3 bg-paper border border-line rounded-lg px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-ink truncate">{label}</div>
+                  {docs[label] && <div className="text-xs text-green-d truncate">📎 {docs[label].name}</div>}
+                </div>
+                <label className={`flex-shrink-0 text-xs font-bold rounded-lg px-3 py-1.5 cursor-pointer transition
+                  ${docs[label] ? "bg-green/10 text-green-d border border-green/30" : "bg-gold/10 text-gold-d border border-gold/40"}`}>
+                  <input type="file" className="hidden" onChange={(e) => setDoc(label, e.target.files?.[0])} />
+                  {docs[label] ? "Replace" : "Attach"}
+                </label>
+              </div>
+            ))}
+          </div>
+          {errors.docs && <div className="text-xs text-brick mt-2">{errors.docs}</div>}
+
+          <div className="mt-4 pt-4 border-t border-line">
+            <div className="label mb-1">Any other supporting documents (optional)</div>
+            <label className="inline-flex items-center gap-2 text-sm font-semibold text-gold-d cursor-pointer mt-1">
+              <input type="file" multiple className="hidden" onChange={addExtraFiles} />
+              <span className="border border-line rounded-lg px-3 py-2 bg-paper hover:border-gold">
+                + Choose files
+              </span>
+            </label>
+            {extraFiles.length > 0 && (
+              <ul className="mt-3 space-y-1.5">
+                {extraFiles.map((file, i) => (
+                  <li key={i} className="flex items-center justify-between text-sm bg-paper border border-line rounded-lg px-3 py-1.5">
+                    <span className="truncate">📎 {file.name}</span>
+                    <button type="button" onClick={() => removeExtraFile(i)} className="text-brick font-bold text-xs ml-2 flex-shrink-0">Remove</button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         <label className="flex items-start gap-2.5 cursor-pointer">
@@ -372,10 +428,10 @@ function TrackCard({ app, onChange, toast }) {
       <div className="flex justify-between items-start gap-3">
         <div>
           <div className="font-bold text-ink">{app.student_name}</div>
-          <div className="text-xs text-ink-soft mt-0.5">
-            {app.id} · {app.institution}
-            {app.course_name && <> · <span className="text-green-d font-semibold">{app.course_name}</span></>}
-            {" "}· {app.ward} ward
+          <div className="text-xs text-ink-soft mt-0.5 flex items-center gap-1.5 flex-wrap">
+            <span>{app.id} · {app.institution}</span>
+            {app.course_name && <span>· <span className="text-green-d font-semibold">{app.course_name}</span></span>}
+            <span className="inline-flex items-center gap-1"><WardDot ward={app.ward} /> {app.ward} ward</span>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5">

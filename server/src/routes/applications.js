@@ -16,6 +16,13 @@ const STAGE_LABEL = {
 
 // ---- Submit a new application (applicant) ----
 r.post("/", requireAuth, async (req, res) => {
+  const { data: settings } = await supa.from("settings").select("application_deadline").eq("id", 1).single();
+  if (settings?.application_deadline && new Date() > new Date(settings.application_deadline)) {
+    return res.status(403).json({
+      error: `Applications closed on ${new Date(settings.application_deadline).toLocaleDateString("en-KE", { day: "2-digit", month: "long", year: "numeric" })}. Contact the constituency office if you believe this is an error.`,
+    });
+  }
+
   const b = req.body || {};
   const required = ["student_name", "institution", "level", "ward", "guardian_name", "phone", "id_number", "amount_requested", "reason"];
   for (const f of required)

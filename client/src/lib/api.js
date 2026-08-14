@@ -64,6 +64,8 @@ export const api = {
 
   summary: () => req("/reports/summary"),
   analytics: () => req("/reports/analytics"),
+  settings: () => req("/settings"),
+  adminUpdateSettings: (payload) => req("/admin/settings", { method: "PATCH", body: payload }),
   reportUrl: (kind, params = {}) => {
     const q = new URLSearchParams(params).toString();
     return `${BASE}/reports/${kind}${q ? "?" + q : ""}`;

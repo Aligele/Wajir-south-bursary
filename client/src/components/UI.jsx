@@ -92,3 +92,21 @@ export function fmtDate(ts) {
   if (!ts) return "";
   return new Date(ts).toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric" });
 }
+
+// One distinct colour per ward, used as a small dot/badge so wards are
+// recognisable at a glance across queues, the committee view, and reports.
+export const WARD_COLORS = {
+  "Benane":           "#c9524d",
+  "Burder":           "#3f7d5c",
+  "Dadajabula":       "#2f5a7a",
+  "Habaswein":        "#c98a1e",
+  "Lagboghol South":  "#7a4f9e",
+  "Ibrahim Ure":      "#1f8a8a",
+  "Diif":             "#a3341f",
+};
+const FALLBACK_WARD_COLOR = "#6b5d49";
+
+export function WardDot({ ward, size = 8 }) {
+  const color = WARD_COLORS[ward] || FALLBACK_WARD_COLOR;
+  return <span className="inline-block rounded-full flex-shrink-0" style={{ width: size, height: size, background: color }} aria-hidden />;
+}

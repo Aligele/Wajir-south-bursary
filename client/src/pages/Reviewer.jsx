@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { api, getToken, ROLE_LABEL } from "../lib/api.js";
-import { Pipeline, StatusTag, money, fmtDate } from "../components/UI.jsx";
+import { Pipeline, StatusTag, money, fmtDate, WardDot } from "../components/UI.jsx";
 
 const STAGE_LABEL = { submitted: "Submitted", chief: "Area Chief", manager: "CDF Manager", clerk: "Clerk", chairman: "Chairman", mp: "MP", approved: "Approved" };
 
@@ -12,7 +12,7 @@ const CAT_TABS = [
 ];
 
 export default function Reviewer({ user, toast }) {
-  const [view, setView] = useState("queue"); // queue | all | analytics | reports
+  const [view, setView] = useState("queue"); // queue | all | committee | analytics | reports
   const [catFilter, setCatFilter] = useState("all");
   const [apps, setApps] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -23,7 +23,7 @@ export default function Reviewer({ user, toast }) {
   async function refresh() {
     setLoading(true);
     try {
-      const d = await api.listApps(view === "all" || view === "reports" ? "all" : undefined);
+      const d = await api.listApps(view === "all" || view === "reports" || view === "committee" ? "all" : undefined);
       setApps(d.applications);
       if (view === "reports") setSummary(await api.summary());
       if (view === "analytics") setAnalytics(await api.analytics());
@@ -35,7 +35,7 @@ export default function Reviewer({ user, toast }) {
   const filteredApps = catFilter === "all" ? apps
     : apps.filter((a) => a.edu_category === catFilter);
 
-  const tabs = [["queue", "My review queue"], ["all", "All applications"], ["analytics", "Analytics"], ["reports", "Reports"]];
+  const tabs = [["queue", "My review queue"], ["all", "All applications"], ["committee", "Committee view"], ["analytics", "Analytics"], ["reports", "Reports"]];
 
   return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -49,6 +49,8 @@ export default function Reviewer({ user, toast }) {
         <Reports summary={summary} />
       ) : view === "analytics" ? (
         <Analytics data={analytics} loading={loading} />
+      ) : view === "committee" ? (
+        <CommitteeView apps={filteredApps} loading={loading} catFilter={catFilter} setCatFilter={setCatFilter} />
       ) : (
         <>
           <Kpis apps={apps} view={view} role={user.role} />
@@ -190,10 +192,10 @@ function QueueList({ apps, loading, onOpen, view }) {
                 <div className="font-bold text-ink">{a.student_name}</div>
                 {a.flagged && <span className="tag bg-[#f6ddd6] text-brick">⚠ Flagged</span>}
               </div>
-              <div className="text-xs text-ink-soft mt-0.5">
-                {a.id} · {a.institution}
-                {a.course_name && <> · <span className="font-semibold text-green-d">{a.course_name}</span></>}
-                {" "}· {a.ward} ward{a.sub_location ? ` (${a.sub_location})` : ""}
+              <div className="text-xs text-ink-soft mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <span>{a.id} · {a.institution}</span>
+                {a.course_name && <span>· <span className="font-semibold text-green-d">{a.course_name}</span></span>}
+                <span className="inline-flex items-center gap-1"><WardDot ward={a.ward} /> {a.ward} ward{a.sub_location ? ` (${a.sub_location})` : ""}</span>
               </div>
             </div>
             <div className="flex flex-col items-end gap-1.5">
@@ -497,6 +499,127 @@ function Analytics({ data, loading }) {
               <Bar key={inst.name} label={inst.name} n={inst.count} total={data.university_total} color="bg-[#2f5a7a]" />
             ))}
           </div>
+        </div>
+      )}
+
+      {data.top_courses?.length > 0 && (
+        <div className="card">
+          <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-1">
+            Applicants by course / programme
+          </div>
+          <p className="text-xs text-ink-soft mb-3">Diploma, Certificate and Bachelor's applicants only — High School students are grouped simply as High School above, since they don't have a specific course.</p>
+          <div className="space-y-2">
+            {data.top_courses.map((c) => (
+              <Bar key={c.name} label={c.name} n={c.count} total={data.top_courses.reduce((s, x) => s + x.count, 0)} color="bg-[#7a4f9e]" />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Committee meeting view: every application's full details laid out inline,
+// no clicking into each one — built for a group looking at one screen together.
+function CommitteeView({ apps, loading, catFilter, setCatFilter }) {
+  const [docsById, setDocsById] = useState({});
+
+  useEffect(() => {
+    apps.forEach((a) => {
+      if (docsById[a.id] !== undefined) return;
+      api.getApp(a.id).then((d) => setDocsById((prev) => ({ ...prev, [a.id]: d.documents }))).catch(() => {});
+    });
+  }, [apps]);
+
+  async function openDoc(docId) {
+    try { const { url } = await api.docLink(docId); window.open(url, "_blank"); }
+    catch { /* ignore */ }
+  }
+
+  if (loading) return <div className="card text-ink-soft">Loading…</div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="card !py-3.5">
+        <div className="font-bold text-ink">Committee meeting view</div>
+        <div className="text-sm text-ink-soft mt-0.5">
+          Every application's full details, laid out for the committee to review together —
+          no need to open each one individually.
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {CAT_TABS.map((t) => {
+          const count = t.key === "all" ? apps.length : apps.filter((a) => a.edu_category === t.key).length;
+          return (
+            <button key={t.key} onClick={() => setCatFilter(t.key)}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold border transition
+                ${catFilter === t.key ? "bg-green text-white border-green" : "bg-paper border-line text-ink-soft hover:border-gold"}`}>
+              {t.label}
+              <span className={`text-[11px] rounded-full px-1.5 py-0.5 font-bold ${catFilter === t.key ? "bg-white/20" : "bg-sand-2"}`}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {!apps.length ? (
+        <div className="card text-ink-soft">Nothing to show for this filter.</div>
+      ) : (
+        <div className="space-y-4">
+          {apps.map((a) => (
+            <div key={a.id} className="card space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-extrabold text-lg text-ink">{a.student_name}</div>
+                    {a.flagged && <span className="tag bg-[#f6ddd6] text-brick">⚠ Flagged</span>}
+                  </div>
+                  <div className="text-xs text-ink-soft mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span>{a.id}</span>
+                    <span className="inline-flex items-center gap-1"><WardDot ward={a.ward} /> {a.ward}{a.sub_location ? ` · ${a.sub_location}` : ""}</span>
+                    <span>· {a.gender === "male" ? "Male" : a.gender === "female" ? "Female" : "—"}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1.5">
+                  <div className="font-extrabold text-green-d">{money(a.status === "approved" ? a.award_amount : a.amount_requested)}</div>
+                  <StatusTag status={a.status} />
+                </div>
+              </div>
+
+              <Pipeline stage={a.stage} status={a.status} />
+
+              <div className="grid sm:grid-cols-3 gap-x-4 gap-y-2 bg-sand-2 rounded-lg p-3">
+                {[["Category", a.level], ["Course", a.course_name || "—"], ["Institution", a.institution],
+                  ["Guardian", a.guardian_name], ["Phone", a.phone], ["Guardian ID", a.id_number],
+                  ["Applied", fmtDate(a.created_at)], ["Annual fees", a.annual_fees ? money(a.annual_fees) : "—"],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft">{k}</div>
+                    <div className="text-sm text-ink truncate">{v}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-1">Reason</div>
+                <p className="text-sm text-ink">{a.reason}</p>
+              </div>
+
+              {a.flagged && (
+                <div className="text-sm text-brick bg-[#f6ddd6] rounded-lg px-3 py-2">⚠ {a.flag_reason}</div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {(docsById[a.id] || []).map((d) => (
+                  <button key={d.id} onClick={() => openDoc(d.id)}
+                    className="text-xs font-semibold text-[#2f5a7a] bg-[#dde8f1] rounded-full px-3 py-1 hover:underline">
+                    📎 {d.label}
+                  </button>
+                ))}
+                {docsById[a.id]?.length === 0 && <span className="text-xs text-ink-soft italic">No documents attached</span>}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

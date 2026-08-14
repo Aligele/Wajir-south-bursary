@@ -29,6 +29,11 @@ app.get("/api/sublocations", async (req, res) => {
   res.json({ subLocations: data || [] });
 });
 
+app.get("/api/settings", async (_req, res) => {
+  const { data } = await supa.from("settings").select("*").eq("id", 1).single();
+  res.json({ settings: data || {} });
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/applications", appRoutes);

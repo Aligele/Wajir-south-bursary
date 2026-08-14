@@ -31,14 +31,16 @@ export default function Admin({ toast }) {
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
-      <div className="inline-flex gap-1 bg-sand-2 border border-line rounded-xl p-1">
-        {[["users", "Accounts"], ["sublocations", "Wards & Sub-locations"]].map(([k, l]) => (
+      <div className="inline-flex flex-wrap gap-1 bg-sand-2 border border-line rounded-xl p-1">
+        {[["users", "Accounts"], ["sublocations", "Wards & Sub-locations"], ["deadlines", "Deadlines"]].map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all duration-200 ${tab === k ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>{l}</button>
         ))}
       </div>
 
       {tab === "sublocations" ? (
         <SubLocations wards={wards} toast={toast} />
+      ) : tab === "deadlines" ? (
+        <Deadlines toast={toast} />
       ) : (
         <>
           <div className="flex justify-between items-center">
@@ -276,6 +278,71 @@ function SubLocations({ wards, toast }) {
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+function Deadlines({ toast }) {
+  const [settings, setSettings] = useState(null);
+  const [appDeadline, setAppDeadline] = useState("");
+  const [approvalDeadline, setApprovalDeadline] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  function toLocalInput(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  }
+
+  async function refresh() {
+    try {
+      const d = await api.settings();
+      setSettings(d.settings);
+      setAppDeadline(toLocalInput(d.settings.application_deadline));
+      setApprovalDeadline(toLocalInput(d.settings.approval_deadline));
+    } catch (e) { toast(e.message); }
+  }
+  useEffect(() => { refresh(); }, []);
+
+  async function save() {
+    setBusy(true);
+    try {
+      await api.adminUpdateSettings({
+        application_deadline: appDeadline ? new Date(appDeadline).toISOString() : null,
+        approval_deadline: approvalDeadline ? new Date(approvalDeadline).toISOString() : null,
+      });
+      toast("Deadlines updated.");
+      refresh();
+    } catch (e) { toast(e.message); }
+    setBusy(false);
+  }
+
+  if (!settings) return <div className="card text-ink-soft">Loading…</div>;
+
+  return (
+    <div className="space-y-5">
+      <div className="card">
+        <h2 className="text-lg font-extrabold text-green-d">Application deadline</h2>
+        <p className="text-sm text-ink-soft mt-1 mb-4">
+          Once this passes, applicants can no longer submit new applications. Leave blank to
+          keep applications open indefinitely.
+        </p>
+        <input type="datetime-local" className="field max-w-xs" value={appDeadline} onChange={(e) => setAppDeadline(e.target.value)} />
+      </div>
+
+      <div className="card">
+        <h2 className="text-lg font-extrabold text-green-d">Approval target date</h2>
+        <p className="text-sm text-ink-soft mt-1 mb-4">
+          Shown to the Area Chief, CDF Manager, Clerk, Chairman and MP as the date the
+          committee aims to finish reviewing — a reminder, not a hard cutoff.
+        </p>
+        <input type="datetime-local" className="field max-w-xs" value={approvalDeadline} onChange={(e) => setApprovalDeadline(e.target.value)} />
+      </div>
+
+      <div className="flex justify-end">
+        <button className="btn-primary" onClick={save} disabled={busy}>{busy ? "Saving…" : "Save deadlines"}</button>
+      </div>
     </div>
   );
 }

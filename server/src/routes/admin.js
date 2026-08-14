@@ -107,4 +107,22 @@ r.delete("/sublocations/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---- Constituency-wide settings: deadlines ----
+r.get("/settings", async (_req, res) => {
+  const { data } = await supa.from("settings").select("*").eq("id", 1).single();
+  res.json({ settings: data || {} });
+});
+
+r.patch("/settings", async (req, res) => {
+  const { application_deadline, approval_deadline } = req.body || {};
+  const update = { updated_at: new Date().toISOString() };
+  if (application_deadline !== undefined) update.application_deadline = application_deadline || null;
+  if (approval_deadline !== undefined) update.approval_deadline = approval_deadline || null;
+
+  const { data, error } = await supa
+    .from("settings").update(update).eq("id", 1).select("*").single();
+  if (error) return res.status(500).json({ error: "Could not update settings." });
+  res.json({ settings: data });
+});
+
 export default r;

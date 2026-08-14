@@ -49,6 +49,7 @@ r.get("/analytics", requireAuth, requireRole("chief", "cdf_manager", "clerk", "c
   const byCategory = {};
   const byWardCategory = {}; // "ward|category" -> count
   const byInstitution = {};
+  const byCourse = {}; // tertiary only — high school has no meaningful "course"
   const demo = { boys: 0, girls: 0, men: 0, ladies: 0, unspecified: 0 };
   let university = 0;
   let flagged = 0;
@@ -64,6 +65,11 @@ r.get("/analytics", requireAuth, requireRole("chief", "cdf_manager", "clerk", "c
     const wcKey = `${a.ward}|${cat}`;
     byWardCategory[wcKey] = (byWardCategory[wcKey] || 0) + 1;
 
+    const isTertiary = a.edu_category === "diploma_certificate" || a.edu_category === "bachelor";
+    if (isTertiary && a.course_name) {
+      byCourse[a.course_name] = (byCourse[a.course_name] || 0) + 1;
+    }
+
     if (a.edu_category === "bachelor") {
       university++;
       const inst = (a.institution || "Unspecified").trim();
@@ -72,15 +78,18 @@ r.get("/analytics", requireAuth, requireRole("chief", "cdf_manager", "clerk", "c
 
     if (a.flagged) flagged++;
 
-    const isAdult = a.edu_category === "diploma_certificate" || a.edu_category === "bachelor";
-    if (a.gender === "male") demo[isAdult ? "men" : "boys"]++;
-    else if (a.gender === "female") demo[isAdult ? "ladies" : "girls"]++;
+    if (a.gender === "male") demo[isTertiary ? "men" : "boys"]++;
+    else if (a.gender === "female") demo[isTertiary ? "ladies" : "girls"]++;
     else demo.unspecified++;
   }
 
   const topInstitutions = Object.entries(byInstitution)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 15)
+    .map(([name, count]) => ({ name, count }));
+
+  const topCourses = Object.entries(byCourse)
+    .sort((a, b) => b[1] - a[1])
     .map(([name, count]) => ({ name, count }));
 
   res.json({
@@ -91,6 +100,7 @@ r.get("/analytics", requireAuth, requireRole("chief", "cdf_manager", "clerk", "c
     demographics: demo,
     university_total: university,
     top_institutions: topInstitutions,
+    top_courses: topCourses,
     flagged_count: flagged,
   });
 });

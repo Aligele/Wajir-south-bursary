@@ -68,19 +68,6 @@ export default function Landing({ onApply, onSignIn, onHistory }) {
         </div>
       </section>
 
-      <section className="bg-sand-2 border-y border-line">
-        <div className="max-w-3xl mx-auto px-5 py-14 text-center">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-green-d">Apply for a Bursary</h2>
-          <p className="mt-3 text-ink-soft leading-relaxed max-w-lg mx-auto">
-            Eligible students from Wajir South can apply for bursaries online. Upload required
-            documents and track your application securely.
-          </p>
-          <button onClick={onApply} className="btn-primary mt-6 !px-8 !py-3.5 !text-base">
-            Start Bursary Application
-          </button>
-        </div>
-      </section>
-
       <footer id="contact" className="bg-green-d text-sand">
         <div className="max-w-5xl mx-auto px-5 py-12 grid sm:grid-cols-3 gap-8">
           <div>

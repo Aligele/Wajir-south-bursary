@@ -284,8 +284,10 @@ function Drawer({ id, user, onClose, onDone, toast }) {
 
               <div className="card grid grid-cols-2 gap-x-4 gap-y-3">
                 {[["Institution", app.institution], ["Level", app.level], ["Ward", app.ward],
-                  ["Sub-location", app.sub_location || "—"],
+                  ["Location", app.admin_location || "—"], ["Sub-location", app.sub_location || "—"], ["Village", app.village || "—"],
+                  ["Permanent address", app.permanent_address || "—"],
                   ["Gender", app.gender ? (app.gender === "male" ? "Male" : "Female") : "—"],
+                  ["Student ID/Birth Cert.", app.student_id_no || "—"],
                   ["Admission no.", app.admission_no || "—"], ["Guardian", app.guardian_name],
                   ["Phone", app.phone], ["Guardian ID", app.id_number], ["Applied", fmtDate(app.created_at)],
                 ].map(([k, v]) => (
@@ -590,8 +592,9 @@ function CommitteeView({ apps, loading, catFilter, setCatFilter }) {
 
               <div className="grid sm:grid-cols-3 gap-x-4 gap-y-2 bg-sand-2 rounded-lg p-3">
                 {[["Category", a.level], ["Course", a.course_name || "—"], ["Institution", a.institution],
+                  ["Location", a.admin_location || "—"], ["Village", a.village || "—"], ["Student ID/Birth Cert.", a.student_id_no || "—"],
                   ["Guardian", a.guardian_name], ["Phone", a.phone], ["Guardian ID", a.id_number],
-                  ["Applied", fmtDate(a.created_at)], ["Annual fees", a.annual_fees ? money(a.annual_fees) : "—"],
+                  ["Applied", fmtDate(a.created_at)], ["Annual fees", a.annual_fees ? money(a.annual_fees) : "—"], ["Permanent address", a.permanent_address || "—"],
                 ].map(([k, v]) => (
                   <div key={k}>
                     <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft">{k}</div>

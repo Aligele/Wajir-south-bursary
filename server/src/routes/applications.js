@@ -24,7 +24,8 @@ r.post("/", requireAuth, async (req, res) => {
   }
 
   const b = req.body || {};
-  const required = ["student_name", "institution", "level", "ward", "guardian_name", "phone", "id_number", "amount_requested", "reason"];
+  const required = ["student_name", "institution", "level", "ward", "guardian_name", "phone", "id_number",
+    "amount_requested", "reason", "student_id_no", "permanent_address", "admin_location", "village"];
   for (const f of required)
     if (!b[f] && b[f] !== 0) return res.status(400).json({ error: `Missing field: ${f}` });
 
@@ -49,6 +50,7 @@ r.post("/", requireAuth, async (req, res) => {
       id,
       applicant_id: req.user.id,
       student_name: b.student_name,
+      student_id_no: b.student_id_no,
       admission_no: b.admission_no || null,
       institution: b.institution,
       level: b.level,
@@ -56,7 +58,11 @@ r.post("/", requireAuth, async (req, res) => {
       course_name: b.course_name || null,
       gender: b.gender || null,
       ward: b.ward,
+      sub_county: b.sub_county || "Wajir South",
+      admin_location: b.admin_location,
       sub_location: b.sub_location || null,
+      village: b.village,
+      permanent_address: b.permanent_address,
       guardian_name: b.guardian_name,
       phone: b.phone,
       id_number: b.id_number,

@@ -8,12 +8,20 @@ const CATEGORY_ICONS = {
   bachelor:            "🎓",
 };
 
-// Each category has its own compulsory documents — high school students
-// don't need an admission letter the way a university student does, etc.
+// Official NG-CDF compulsory attachments — the same requirements apply
+// whether the applicant is in Secondary School, a Middle-Level College,
+// or a University, per the constituency's bursary application form.
+const REQUIRED_DOCS_ALL = [
+  "Copy of student's ID card or birth certificate",
+  "Copy of parent/guardian's National ID",
+  "Academic certificate, report form, or college transcript",
+  "Admission letter",
+  "Fee structure & fee balance statement (signed and stamped by the institution)",
+];
 const REQUIRED_DOCS = {
-  high_school: ["Fee structure / bill", "Birth certificate or school ID"],
-  diploma_certificate: ["Admission letter", "Fee structure", "Copy of guardian's ID"],
-  bachelor: ["Admission letter", "Fee structure", "Copy of guardian's ID", "KUCCPS placement letter (if applicable)"],
+  high_school: REQUIRED_DOCS_ALL,
+  diploma_certificate: REQUIRED_DOCS_ALL,
+  bachelor: REQUIRED_DOCS_ALL,
 };
 
 function Field({ k, label, type = "text", ph, f, errors, set }) {
@@ -136,9 +144,10 @@ function CategoryPicker({ categories, wards, onDone, deadlinePassed }) {
 /* ── Step 2: fill the application form ── */
 function ApplyForm({ category, wards, onDone, onBack }) {
   const blank = {
-    student_name: "", gender: "", admission_no: "", institution: "",
+    student_name: "", gender: "", student_id_no: "", admission_no: "", institution: "",
     course_name: category.courses[0]?.name || "",
-    ward: wards[0] || "", sub_location: "", guardian_name: "", phone: "",
+    ward: wards[0] || "", sub_county: "Wajir South", admin_location: "", sub_location: "", village: "",
+    permanent_address: "", guardian_name: "", phone: "",
     id_number: "", amount_requested: "", annual_fees: "", reason: "",
   };
   const [f, setF] = useState(blank);
@@ -180,8 +189,12 @@ function ApplyForm({ category, wards, onDone, onBack }) {
     const e = {};
     if (!f.student_name.trim()) e.student_name = "Required";
     if (!f.gender) e.gender = "Select gender";
+    if (!/^\d{6,10}$/.test(f.student_id_no)) e.student_id_no = "Valid ID or birth certificate number";
     if (!f.institution.trim()) e.institution = "Required";
     if (!f.course_name) e.course_name = "Select a course";
+    if (!f.admin_location.trim()) e.admin_location = "Required";
+    if (!f.village.trim()) e.village = "Required";
+    if (!f.permanent_address.trim()) e.permanent_address = "Required";
     if (!f.guardian_name.trim()) e.guardian_name = "Required";
     if (!/^0\d{9}$/.test(f.phone)) e.phone = "e.g. 0712345678";
     if (!/^\d{6,9}$/.test(f.id_number)) e.id_number = "Valid ID number";
@@ -237,6 +250,14 @@ function ApplyForm({ category, wards, onDone, onBack }) {
           {CATEGORY_ICONS[category.slug]} {category.label} — Bursary Application
         </h2>
 
+        <div className="bg-[#fef2d8] border border-gold/40 rounded-lg px-3.5 py-3">
+          <p className="text-xs text-gold-d font-semibold leading-relaxed">
+            Submitting this application is not a guarantee of a bursary award. Once allocated,
+            a bursary is not transferable. Payment is made directly to the institution, not to
+            individual applicants.
+          </p>
+        </div>
+
         {/* Course selector — prominent, matches the category */}
         <div className="bg-sand-2 border border-line rounded-xl p-4">
           <div className="label mb-2">
@@ -271,33 +292,50 @@ function ApplyForm({ category, wards, onDone, onBack }) {
             </select>
             {errors.gender && <div className="text-xs text-brick mt-1">{errors.gender}</div>}
           </div>
+          <Field k="student_id_no" f={f} errors={errors} set={set} label="Student's ID or birth certificate no." ph="e.g. 12345678" />
           <Field k="admission_no" f={f} errors={errors} set={set} label="Admission / registration no." ph="Optional" />
           <div className="sm:col-span-2">
             <Field k="institution" f={f} errors={errors} set={set} label="Institution name" ph="School / College / University" />
           </div>
-          <div>
-            <div className="label mb-1">Ward</div>
-            <select className="field" value={f.ward} onChange={(e) => set("ward", e.target.value)}>
-              {wards.map((w) => <option key={w}>{w}</option>)}
-            </select>
-            <div className="text-[11px] text-ink-soft mt-1">
-              Bursaries are only for residents of Wajir South's seven wards. A parent/guardian may
+          <div className="sm:col-span-2">
+            <Field k="permanent_address" f={f} errors={errors} set={set} label="Permanent home address" ph="e.g. P.O. Box 123, Habaswein" />
+          </div>
+
+          <div className="sm:col-span-2 bg-sand-2 border border-line rounded-xl p-4">
+            <div className="label mb-3">Place of residence</div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <div className="label mb-1">Sub-County</div>
+                <input className="field" value={f.sub_county} readOnly disabled />
+              </div>
+              <div>
+                <div className="label mb-1">Ward</div>
+                <select className="field" value={f.ward} onChange={(e) => set("ward", e.target.value)}>
+                  {wards.map((w) => <option key={w}>{w}</option>)}
+                </select>
+              </div>
+              <Field k="admin_location" f={f} errors={errors} set={set} label="Location" ph="e.g. Habaswein" />
+              <div>
+                <div className="label mb-1">Sub-location</div>
+                {subLocs.length > 0 ? (
+                  <select className="field" value={f.sub_location} onChange={(e) => set("sub_location", e.target.value)}>
+                    <option value="">Select…</option>
+                    {subLocs.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  </select>
+                ) : (
+                  <input className="field" value={f.sub_location} onChange={(e) => set("sub_location", e.target.value)}
+                    placeholder="Type your sub-location" />
+                )}
+              </div>
+              <Field k="village" f={f} errors={errors} set={set} label="Village" ph="e.g. Leheley" />
+            </div>
+            <div className="text-[11px] text-ink-soft mt-3">
+              Bursaries are only for residents of Wajir South's seven wards. Your sub-location
+              routes this application to the Area Chief covering your area. A parent/guardian may
               register and submit on behalf of a student relative — that's expected.
             </div>
           </div>
-          <div>
-            <div className="label mb-1">Sub-location</div>
-            {subLocs.length > 0 ? (
-              <select className="field" value={f.sub_location} onChange={(e) => set("sub_location", e.target.value)}>
-                <option value="">Select…</option>
-                {subLocs.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
-              </select>
-            ) : (
-              <input className="field" value={f.sub_location} onChange={(e) => set("sub_location", e.target.value)}
-                placeholder="Type your sub-location" />
-            )}
-            <div className="text-[11px] text-ink-soft mt-1">Used to route your application to the Area Chief covering your sub-location.</div>
-          </div>
+
           <Field k="guardian_name" f={f} errors={errors} set={set} label="Parent / guardian name" ph="Full name" />
           <Field k="phone" f={f} errors={errors} set={set} label="Phone number" ph="07XXXXXXXX" />
           <Field k="id_number" f={f} errors={errors} set={set} label="Guardian national ID" ph="e.g. 12345678" />
@@ -337,6 +375,11 @@ function ApplyForm({ category, wards, onDone, onBack }) {
 
           <div className="mt-4 pt-4 border-t border-line">
             <div className="label mb-1">Any other supporting documents (optional)</div>
+            <p className="text-xs text-ink-soft mb-2">
+              If a parent has passed away, attach their death certificate and the student's birth
+              certificate here to prove kinship — only needed where applicable, not required for
+              every applicant.
+            </p>
             <label className="inline-flex items-center gap-2 text-sm font-semibold text-gold-d cursor-pointer mt-1">
               <input type="file" multiple className="hidden" onChange={addExtraFiles} />
               <span className="border border-line rounded-lg px-3 py-2 bg-paper hover:border-gold">

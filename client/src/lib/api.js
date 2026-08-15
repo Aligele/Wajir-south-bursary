@@ -43,6 +43,8 @@ async function req(path, { method = "GET", body, isForm } = {}) {
 export const api = {
   login: (email, password) => req("/auth/login", { method: "POST", body: { email, password } }),
   register: (payload) => req("/auth/register", { method: "POST", body: payload }),
+  forgotPassword: (email) => req("/auth/forgot-password", { method: "POST", body: { email } }),
+  resetPassword: (token, password) => req("/auth/reset-password", { method: "POST", body: { token, password } }),
   wards: () => req("/wards"),
   subLocations: (ward) => req("/sublocations" + (ward ? `?ward=${encodeURIComponent(ward)}` : "")),
   categories: () => req("/categories"),

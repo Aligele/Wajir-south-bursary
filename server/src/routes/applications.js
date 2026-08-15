@@ -87,6 +87,15 @@ r.post("/", requireAuth, async (req, res) => {
   // advance immediately into the area chief's queue
   await supa.from("applications").update({ stage: "chief" }).eq("id", id);
 
+  // Confirm receipt — the applicant should know right away that it went through
+  notify({
+    appId: id,
+    email: req.user.email,
+    phone: b.phone,
+    subject: `Wajir South Bursary — application received (${id})`,
+    body: `Hi, your bursary application for ${b.student_name} (${id}) has been received and is now with the Area Chief for review. You'll be notified as it moves forward.`,
+  }).catch(() => { /* notification failures shouldn't block the response */ });
+
   res.json({ application: { ...data, stage: "chief" } });
 });
 

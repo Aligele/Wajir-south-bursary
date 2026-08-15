@@ -3,16 +3,22 @@ import { getUser, clearSession, ROLE_LABEL } from "./lib/api.js";
 import { Seal, KenyaFlag } from "./components/UI.jsx";
 import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 import Applicant from "./pages/Applicant.jsx";
 import Reviewer from "./pages/Reviewer.jsx";
 import Admin from "./pages/Admin.jsx";
 import History from "./pages/History.jsx";
+
+function getResetToken() {
+  return new URLSearchParams(window.location.search).get("reset");
+}
 
 export default function App() {
   const [user, setUser] = useState(getUser());
   const [toastMsg, setToastMsg] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
   const [publicView, setPublicView] = useState("landing"); // landing | login | register
+  const [resetToken, setResetToken] = useState(getResetToken());
 
   const toast = useCallback((msg) => {
     setToastMsg(msg);
@@ -22,6 +28,16 @@ export default function App() {
   useEffect(() => { setUser(getUser()); }, []);
 
   function logout() { clearSession(); setUser(null); setPublicView("landing"); }
+
+  if (resetToken) {
+    return (
+      <ResetPassword token={resetToken} onDone={() => {
+        window.history.replaceState({}, "", window.location.pathname);
+        setResetToken(null);
+        setPublicView("login");
+      }} />
+    );
+  }
 
   if (!user) {
     if (publicView === "landing") {

@@ -3,13 +3,14 @@ import { api, setSession, ROLE_LABEL } from "../lib/api.js";
 import { Seal, KenyaFlag } from "../components/UI.jsx";
 
 export default function Login({ onAuth, initialMode = "login", onBack }) {
-  const [mode, setMode] = useState(initialMode);
+  const [mode, setMode] = useState(initialMode); // login | register | forgot
   const [form, setForm] = useState({
     full_name: "", email: "", phone: "", password: "", role: "applicant", ward: "",
   });
   const [wards, setWards] = useState([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => { api.wards().then((d) => setWards(d.wards)).catch(() => {}); }, []);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -17,11 +18,16 @@ export default function Login({ onAuth, initialMode = "login", onBack }) {
   async function submit() {
     setErr(""); setBusy(true);
     try {
-      const res = mode === "login"
-        ? await api.login(form.email, form.password)
-        : await api.register(form);
-      setSession(res.token, res.user);
-      onAuth(res.user);
+      if (mode === "forgot") {
+        await api.forgotPassword(form.email);
+        setForgotSent(true);
+      } else {
+        const res = mode === "login"
+          ? await api.login(form.email, form.password)
+          : await api.register(form);
+        setSession(res.token, res.user);
+        onAuth(res.user);
+      }
     } catch (e) { setErr(e.message); }
     setBusy(false);
   }
@@ -72,15 +78,47 @@ export default function Login({ onAuth, initialMode = "login", onBack }) {
             </button>
           )}
 
-          <div className="flex gap-1 bg-sand-2 border border-line rounded-xl p-1 mb-6">
-            {["login", "register"].map((m) => (
-              <button key={m} onClick={() => { setMode(m); setErr(""); }}
-                className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all duration-200 ${mode === m ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
-                {m === "login" ? "Sign in" : "Create account"}
-              </button>
-            ))}
-          </div>
+          {mode !== "forgot" && (
+            <div className="flex gap-1 bg-sand-2 border border-line rounded-xl p-1 mb-6">
+              {["login", "register"].map((m) => (
+                <button key={m} onClick={() => { setMode(m); setErr(""); setForgotSent(false); }}
+                  className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all duration-200 ${mode === m ? "bg-paper text-green shadow-sm" : "text-ink-soft"}`}>
+                  {m === "login" ? "Sign in" : "Create account"}
+                </button>
+              ))}
+            </div>
+          )}
 
+          {mode === "forgot" ? (
+            <div className="card space-y-3">
+              <div>
+                <div className="font-bold text-ink">Reset your password</div>
+                <p className="text-xs text-ink-soft mt-1">
+                  Enter the email on your account and we'll send a link to reset your password.
+                </p>
+              </div>
+              {forgotSent ? (
+                <div className="bg-[#dff0e4] text-green-d text-sm font-semibold rounded-lg px-3.5 py-3">
+                  If that email is registered, a reset link is on its way. Check your inbox.
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <div className="label mb-1">Email</div>
+                    <input className="field" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="you@example.com"
+                      onKeyDown={(e) => e.key === "Enter" && submit()} />
+                  </div>
+                  {err && <div className="text-sm text-brick font-medium">{err}</div>}
+                  <button className="btn-primary w-full" onClick={submit} disabled={busy}>
+                    {busy ? "Sending…" : "Send reset link"}
+                  </button>
+                </>
+              )}
+              <button onClick={() => { setMode("login"); setErr(""); setForgotSent(false); }} className="text-sm text-gold-d font-bold hover:underline">
+                ← Back to sign in
+              </button>
+            </div>
+          ) : (
           <div className="card space-y-3">
             {mode === "register" && (
               <div>
@@ -118,6 +156,11 @@ export default function Login({ onAuth, initialMode = "login", onBack }) {
             <button className="btn-primary w-full" onClick={submit} disabled={busy}>
               {busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
             </button>
+            {mode === "login" && (
+              <button onClick={() => { setMode("forgot"); setErr(""); }} className="text-sm text-gold-d font-bold hover:underline">
+                Forgot password?
+              </button>
+            )}
             {mode === "register" && (
               <p className="text-xs text-ink-soft leading-relaxed">
                 This creates an applicant account. Area Chief, CDF Manager, Clerk, Chairman,
@@ -125,6 +168,7 @@ export default function Login({ onAuth, initialMode = "login", onBack }) {
               </p>
             )}
           </div>
+          )}
         </div>
       </div>
     </div>

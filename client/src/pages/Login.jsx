@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { api, setSession, ROLE_LABEL } from "../lib/api.js";
 import { Seal, KenyaFlag } from "../components/UI.jsx";
 
-export default function Login({ onAuth }) {
-  const [mode, setMode] = useState("login");
+export default function Login({ onAuth, initialMode = "login", onBack }) {
+  const [mode, setMode] = useState(initialMode);
   const [form, setForm] = useState({
     full_name: "", email: "", phone: "", password: "", role: "applicant", ward: "",
   });
@@ -65,6 +65,12 @@ export default function Login({ onAuth }) {
             <div className="font-extrabold text-green-d">Wajir South Bursary</div>
             <KenyaFlag width={20} />
           </div>
+
+          {onBack && (
+            <button onClick={onBack} className="text-sm text-gold-d font-bold hover:underline mb-4">
+              ← Back to home
+            </button>
+          )}
 
           <div className="flex gap-1 bg-sand-2 border border-line rounded-xl p-1 mb-6">
             {["login", "register"].map((m) => (

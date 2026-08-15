@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getUser, clearSession, ROLE_LABEL } from "./lib/api.js";
 import { Seal, KenyaFlag } from "./components/UI.jsx";
+import Landing from "./pages/Landing.jsx";
 import Login from "./pages/Login.jsx";
 import Applicant from "./pages/Applicant.jsx";
 import Reviewer from "./pages/Reviewer.jsx";
@@ -11,6 +12,7 @@ export default function App() {
   const [user, setUser] = useState(getUser());
   const [toastMsg, setToastMsg] = useState(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [publicView, setPublicView] = useState("landing"); // landing | login | register
 
   const toast = useCallback((msg) => {
     setToastMsg(msg);
@@ -19,9 +21,25 @@ export default function App() {
 
   useEffect(() => { setUser(getUser()); }, []);
 
-  function logout() { clearSession(); setUser(null); }
+  function logout() { clearSession(); setUser(null); setPublicView("landing"); }
 
-  if (!user) return <Login onAuth={setUser} />;
+  if (!user) {
+    if (publicView === "landing") {
+      return (
+        <>
+          <Landing
+            onApply={() => setPublicView("register")}
+            onSignIn={() => setPublicView("login")}
+            onHistory={() => setShowHistory(true)}
+          />
+          {showHistory && <History onClose={() => setShowHistory(false)} />}
+        </>
+      );
+    }
+    return (
+      <Login onAuth={setUser} initialMode={publicView} onBack={() => setPublicView("landing")} />
+    );
+  }
 
   return (
     <div className="min-h-screen">

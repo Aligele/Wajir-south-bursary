@@ -18,6 +18,7 @@ async function fetchAll(filters = {}) {
   let q = supa.from("applications").select("*").order("created_at", { ascending: false });
   if (filters.status) q = q.eq("status", filters.status);
   if (filters.ward) q = q.eq("ward", filters.ward);
+  if (filters.edu_category) q = q.eq("edu_category", filters.edu_category);
   const { data } = await q;
   return data || [];
 }
@@ -107,7 +108,7 @@ r.get("/analytics", requireAuth, requireRole("chief", "cdf_manager", "clerk", "c
 
 
 r.get("/csv", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
-  const rows = await fetchAll({ status: req.query.status, ward: req.query.ward });
+  const rows = await fetchAll({ status: req.query.status, ward: req.query.ward, edu_category: req.query.edu_category });
   const headers = [
     "ID", "Student", "Institution", "Level", "Ward", "Guardian", "Phone",
     "ID Number", "Amount Requested", "Award Amount", "Stage", "Status", "Submitted",
@@ -123,17 +124,19 @@ r.get("/csv", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairma
     ].map(esc).join(","));
   }
   res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", 'attachment; filename="bursary-report.csv"');
+  const fname = ["bursary", req.query.ward, req.query.edu_category, req.query.status].filter(Boolean).join("-").replace(/\s+/g, "_") + ".csv";
+  res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
   res.send(lines.join("\n"));
 });
 
 // PDF export
 r.get("/pdf", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
-  const rows = await fetchAll({ status: req.query.status, ward: req.query.ward });
+  const rows = await fetchAll({ status: req.query.status, ward: req.query.ward, edu_category: req.query.edu_category });
   const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", 'attachment; filename="bursary-report.pdf"');
+  const fname = ["bursary", req.query.ward, req.query.edu_category, req.query.status].filter(Boolean).join("-").replace(/\s+/g, "_") + ".pdf";
+  res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
   doc.pipe(res);
 
   doc.fillColor("#1f5c3d").fontSize(18).text("Wajir South Constituency", { continued: false });

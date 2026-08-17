@@ -380,14 +380,30 @@ function Drawer({ id, user, onClose, onDone, toast }) {
 
 function Reports({ summary }) {
   const token = getToken();
-  async function download(kind) {
-    const res = await fetch(api.reportUrl(kind), { headers: { Authorization: `Bearer ${token}` } });
+  const [wardFilter, setWardFilter] = useState("");
+  const [catFilter, setCatFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  async function download(kind, overrides = {}) {
+    const params = {
+      ward: overrides.ward ?? wardFilter,
+      edu_category: overrides.edu_category ?? catFilter,
+      status: overrides.status ?? statusFilter,
+    };
+    Object.keys(params).forEach((k) => { if (!params[k]) delete params[k]; });
+    const res = await fetch(api.reportUrl(kind, params), { headers: { Authorization: `Bearer ${token}` } });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="(.+)"/);
     const a = document.createElement("a");
-    a.href = url; a.download = `bursary-report.${kind === "csv" ? "csv" : "pdf"}`;
+    a.href = url;
+    a.download = match ? match[1] : `bursary-report.${kind}`;
     a.click(); URL.revokeObjectURL(url);
   }
+
+  const wardNames = summary?.by_ward ? Object.keys(summary.by_ward).sort() : [];
+
   return (
     <div className="space-y-5">
       {summary && (
@@ -403,27 +419,61 @@ function Reports({ summary }) {
       )}
       {summary?.by_ward && (
         <div className="card">
-          <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-3">Applications by ward</div>
+          <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-1">Applications by ward</div>
+          <p className="text-xs text-ink-soft mb-3">Tap a ward to download just that ward's list.</p>
           <div className="space-y-2">
             {Object.entries(summary.by_ward).sort((a, b) => b[1] - a[1]).map(([ward, n]) => (
-              <div key={ward} className="flex items-center gap-3">
-                <div className="w-28 text-sm text-ink">{ward}</div>
+              <button key={ward} onClick={() => download("pdf", { ward })}
+                className="w-full flex items-center gap-3 group hover:bg-sand-2 rounded-lg px-1.5 py-1 transition-colors">
+                <span className="w-28 text-sm text-ink text-left flex items-center gap-1.5">
+                  <WardDot ward={ward} /> {ward}
+                </span>
                 <div className="flex-1 h-2.5 rounded-full bg-sand-2 overflow-hidden">
                   <div className="h-full bg-green transition-all duration-700 ease-out" style={{ width: `${(n / summary.total) * 100}%` }} />
                 </div>
-                <div className="w-8 text-right text-sm font-bold text-green-d">{n}</div>
-              </div>
+                <span className="w-8 text-right text-sm font-bold text-green-d">{n}</span>
+                <span className="text-xs font-bold text-gold-d opacity-0 group-hover:opacity-100 transition-opacity w-16 text-right">↓ PDF</span>
+              </button>
             ))}
           </div>
         </div>
       )}
-      <div className="card flex flex-wrap gap-3 items-center">
-        <div className="flex-1 min-w-[180px]">
-          <div className="font-bold text-ink">Export the register</div>
-          <div className="text-sm text-ink-soft">Download all applications for records or committee meetings.</div>
+
+      <div className="card space-y-4">
+        <div>
+          <div className="font-bold text-ink">Export a custom list</div>
+          <div className="text-sm text-ink-soft">Filter by ward, category, or status, then download as CSV (Excel) or PDF.</div>
         </div>
-        <button className="btn-ghost" onClick={() => download("csv")}>Download CSV</button>
-        <button className="btn-primary" onClick={() => download("pdf")}>Download PDF</button>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <div>
+            <div className="label mb-1">Ward</div>
+            <select className="field" value={wardFilter} onChange={(e) => setWardFilter(e.target.value)}>
+              <option value="">All wards</option>
+              {wardNames.map((w) => <option key={w} value={w}>{w}</option>)}
+            </select>
+          </div>
+          <div>
+            <div className="label mb-1">Category</div>
+            <select className="field" value={catFilter} onChange={(e) => setCatFilter(e.target.value)}>
+              <option value="">All categories</option>
+              {CAT_TABS.filter((t) => t.key !== "all").map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <div className="label mb-1">Status</div>
+            <select className="field" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">Any status</option>
+              <option value="in_review">In review</option>
+              <option value="approved">Approved &amp; awarded</option>
+              <option value="rejected">Rejected</option>
+              <option value="returned">Returned</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3">
+          <button className="btn-ghost" onClick={() => download("csv")}>Download CSV</button>
+          <button className="btn-primary" onClick={() => download("pdf")}>Download PDF</button>
+        </div>
       </div>
     </div>
   );

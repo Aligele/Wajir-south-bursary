@@ -479,21 +479,44 @@ function Reports({ summary }) {
   );
 }
 
-function Bar({ label, n, total, color = "bg-green" }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-32 sm:w-40 text-sm text-ink truncate flex-shrink-0">{label}</div>
+function Bar({ label, n, total, color = "bg-green", onClick }) {
+  const content = (
+    <>
+      <span className="w-32 sm:w-40 text-sm text-ink truncate flex-shrink-0 text-left">{label}</span>
       <div className="flex-1 h-2.5 rounded-full bg-sand-2 overflow-hidden">
         <div className={`h-full ${color} transition-all duration-700 ease-out`} style={{ width: `${total ? (n / total) * 100 : 0}%` }} />
       </div>
-      <div className="w-8 text-right text-sm font-bold text-green-d flex-shrink-0">{n}</div>
-    </div>
+      <span className="w-8 text-right text-sm font-bold text-green-d flex-shrink-0">{n}</span>
+      {onClick && <span className="text-[10px] font-bold text-gold-d opacity-0 group-hover:opacity-100 transition-opacity w-12 text-right flex-shrink-0">↓ PDF</span>}
+    </>
+  );
+  if (!onClick) return <div className="flex items-center gap-3">{content}</div>;
+  return (
+    <button onClick={onClick} className="w-full flex items-center gap-3 group hover:bg-sand-2 rounded-lg px-1.5 py-1 transition-colors">
+      {content}
+    </button>
   );
 }
+
+const CAT_KEY_BY_LABEL = { "High School": "high_school", "Diploma & Certificate": "diploma_certificate", "Bachelor's Degree": "bachelor" };
 
 function Analytics({ data, loading }) {
   if (loading && !data) return <div className="card text-ink-soft">Loading…</div>;
   if (!data) return null;
+
+  const token = getToken();
+  async function download(params) {
+    const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v));
+    const res = await fetch(api.reportUrl("pdf", clean), { headers: { Authorization: `Bearer ${token}` } });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="(.+)"/);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = match ? match[1] : "bursary-report.pdf";
+    a.click(); URL.revokeObjectURL(url);
+  }
 
   const wardEntries = Object.entries(data.by_ward).sort((a, b) => b[1] - a[1]);
   const catEntries = Object.entries(data.by_category).sort((a, b) => b[1] - a[1]);
@@ -512,16 +535,23 @@ function Analytics({ data, loading }) {
       </div>
 
       <div className="card">
-        <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-3">Applications by ward</div>
+        <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-1">Applications by ward</div>
+        <p className="text-xs text-ink-soft mb-3">Tap a ward to download its list as a PDF.</p>
         <div className="space-y-2">
-          {wardEntries.map(([ward, n]) => <Bar key={ward} label={ward} n={n} total={data.total} />)}
+          {wardEntries.map(([ward, n]) => (
+            <Bar key={ward} label={ward} n={n} total={data.total} onClick={() => download({ ward })} />
+          ))}
         </div>
       </div>
 
       <div className="card">
-        <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-3">Applications by education category</div>
+        <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-1">Applications by education category</div>
+        <p className="text-xs text-ink-soft mb-3">Tap a category to download its list.</p>
         <div className="space-y-2">
-          {catEntries.map(([cat, n]) => <Bar key={cat} label={cat} n={n} total={data.total} color="bg-gold" />)}
+          {catEntries.map(([cat, n]) => (
+            <Bar key={cat} label={cat} n={n} total={data.total} color="bg-gold"
+              onClick={() => download({ edu_category: CAT_KEY_BY_LABEL[cat] })} />
+          ))}
         </div>
       </div>
 
@@ -543,12 +573,14 @@ function Analytics({ data, loading }) {
 
       {data.top_institutions.length > 0 && (
         <div className="card">
-          <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-3">
+          <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-1">
             University applicants by institution
           </div>
+          <p className="text-xs text-ink-soft mb-3">Tap a university to download its applicant list.</p>
           <div className="space-y-2">
             {data.top_institutions.map((inst) => (
-              <Bar key={inst.name} label={inst.name} n={inst.count} total={data.university_total} color="bg-[#2f5a7a]" />
+              <Bar key={inst.name} label={inst.name} n={inst.count} total={data.university_total} color="bg-[#2f5a7a]"
+                onClick={() => download({ institution: inst.name })} />
             ))}
           </div>
         </div>
@@ -559,10 +591,11 @@ function Analytics({ data, loading }) {
           <div className="text-[10px] uppercase tracking-wide font-bold text-ink-soft mb-1">
             Applicants by course / programme
           </div>
-          <p className="text-xs text-ink-soft mb-3">Diploma, Certificate and Bachelor's applicants only — High School students are grouped simply as High School above, since they don't have a specific course.</p>
+          <p className="text-xs text-ink-soft mb-3">Diploma, Certificate and Bachelor's applicants only — High School students are grouped simply as High School above, since they don't have a specific course. Tap a course to download its list.</p>
           <div className="space-y-2">
             {data.top_courses.map((c) => (
-              <Bar key={c.name} label={c.name} n={c.count} total={data.top_courses.reduce((s, x) => s + x.count, 0)} color="bg-[#7a4f9e]" />
+              <Bar key={c.name} label={c.name} n={c.count} total={data.top_courses.reduce((s, x) => s + x.count, 0)} color="bg-[#7a4f9e]"
+                onClick={() => download({ course_name: c.name })} />
             ))}
           </div>
         </div>

@@ -19,6 +19,8 @@ async function fetchAll(filters = {}) {
   if (filters.status) q = q.eq("status", filters.status);
   if (filters.ward) q = q.eq("ward", filters.ward);
   if (filters.edu_category) q = q.eq("edu_category", filters.edu_category);
+  if (filters.course_name) q = q.eq("course_name", filters.course_name);
+  if (filters.institution) q = q.eq("institution", filters.institution);
   const { data } = await q;
   return data || [];
 }
@@ -108,7 +110,7 @@ r.get("/analytics", requireAuth, requireRole("chief", "cdf_manager", "clerk", "c
 
 
 r.get("/csv", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
-  const rows = await fetchAll({ status: req.query.status, ward: req.query.ward, edu_category: req.query.edu_category });
+  const rows = await fetchAll({ status: req.query.status, ward: req.query.ward, edu_category: req.query.edu_category, course_name: req.query.course_name, institution: req.query.institution });
   const headers = [
     "ID", "Student", "Institution", "Level", "Ward", "Guardian", "Phone",
     "ID Number", "Amount Requested", "Award Amount", "Stage", "Status", "Submitted",
@@ -124,18 +126,18 @@ r.get("/csv", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairma
     ].map(esc).join(","));
   }
   res.setHeader("Content-Type", "text/csv");
-  const fname = ["bursary", req.query.ward, req.query.edu_category, req.query.status].filter(Boolean).join("-").replace(/\s+/g, "_") + ".csv";
+  const fname = ["bursary", req.query.ward, req.query.edu_category, req.query.course_name, req.query.institution, req.query.status].filter(Boolean).join("-").replace(/\s+/g, "_") + ".csv";
   res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
   res.send(lines.join("\n"));
 });
 
 // PDF export
 r.get("/pdf", requireAuth, requireRole("chief", "cdf_manager", "clerk", "chairman", "mp"), async (req, res) => {
-  const rows = await fetchAll({ status: req.query.status, ward: req.query.ward, edu_category: req.query.edu_category });
+  const rows = await fetchAll({ status: req.query.status, ward: req.query.ward, edu_category: req.query.edu_category, course_name: req.query.course_name, institution: req.query.institution });
   const doc = new PDFDocument({ margin: 40, size: "A4", layout: "landscape" });
 
   res.setHeader("Content-Type", "application/pdf");
-  const fname = ["bursary", req.query.ward, req.query.edu_category, req.query.status].filter(Boolean).join("-").replace(/\s+/g, "_") + ".pdf";
+  const fname = ["bursary", req.query.ward, req.query.edu_category, req.query.course_name, req.query.institution, req.query.status].filter(Boolean).join("-").replace(/\s+/g, "_") + ".pdf";
   res.setHeader("Content-Disposition", `attachment; filename="${fname}"`);
   doc.pipe(res);
 
